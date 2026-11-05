@@ -31,6 +31,8 @@ function createRoom(id) {
     players: [],
     board: emptyBoard(),
     turn: 0,
+    starter: 0,
+    round: 1,
     winner: null,
     updatedAt: new Date().toISOString(),
     history: []
@@ -173,6 +175,24 @@ async function handleApi(req, res, parts) {
   if (req.method === "POST" && action === "reset") {
     rooms.set(roomId, createRoom(roomId));
     return json(res, 200, { room: publicRoom(getRoom(roomId)) });
+  }
+
+  if (req.method === "POST" && action === "rematch") {
+    const body = await readJson(req);
+    const player = room.players.find((item) => item.id === body.playerId);
+    if (!player) return json(res, 403, { error: "join first" });
+    if (room.players.length !== 2 || room.status !== "finished") {
+      return json(res, 409, { error: "finish this game before a rematch" });
+    }
+    room.starter = room.starter === 0 ? 1 : 0;
+    room.round += 1;
+    room.turn = room.starter;
+    room.board = emptyBoard();
+    room.winner = null;
+    room.status = "active";
+    room.history.push({ at: new Date().toISOString(), type: "rematch", text: `${player.name} started round ${room.round}` });
+    room.updatedAt = new Date().toISOString();
+    return json(res, 200, { room: publicRoom(room) });
   }
 
   return json(res, 404, { error: "unknown route" });

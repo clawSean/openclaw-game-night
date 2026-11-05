@@ -8,12 +8,12 @@ A touch-first, sea-themed arcade built for Telegram. Five games, one tiny Node s
 | Game | Loop |
 | --- | --- |
 | 🦞 Claw Four | Two-player connect four in a shared room |
-| 🐙 Kraken Sequence | Repeat a growing memory pattern |
-| 💣 Abyss Sweep | Clear a 5×5 minefield with safe first tap and flags |
-| 🐚 Shell Shuffle | Match eight pairs in as few moves as possible |
-| ⚡ Reef Reflex | Five-round reaction-time challenge |
+| 🐙 Kraken Sequence | Repeat a growing pattern as the tempo rises |
+| 💣 Abyss Sweep | Deduce a no-guess 5×5 minefield and race the clock |
+| 🐚 Shell Shuffle | Match eight pairs with move, time, and streak feedback |
+| ⚡ Reef Reflex | Five reaction strikes with false-start stakes |
 
-The four solo games keep personal bests in browser storage. Telegram haptics and optional audio add feedback; ordinary browsers work too. Claw Four's shared room state is currently in memory and resets with the server process.
+The four solo games keep native personal-best metrics in browser storage: level, clear time, moves, and reaction average. Telegram haptics and optional audio add feedback; ordinary browsers work too. Claw Four supports player-preserving rematches, but its shared room state is currently in memory and resets with the server process.
 
 ## Run
 
