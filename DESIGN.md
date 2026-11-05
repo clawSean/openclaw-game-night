@@ -142,8 +142,9 @@ This evidence establishes implementation quality, **not fun**:
   a Surface decision, a perfect Calm Tide wave, and an intentional Deep failure.
   The same run checked 360, 390, and 430 pixel viewports with no horizontal
   overflow, unnamed enabled buttons, or page exceptions.
-- The design lab remains local. The public arcade has not been replaced, and no
-  human enjoyment claim has been made.
+- The design lab is isolated at `https://games-lab.jpop.cloud/`; the production
+  arcade at `games.jpop.cloud` remains byte-distinct and unchanged. Staging is a
+  playtest surface, not a release, and no human enjoyment claim has been made.
 
 ## Release rule
 
