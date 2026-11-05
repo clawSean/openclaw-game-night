@@ -1,0 +1,21 @@
+[Unit]
+Description=Clawcade Design Lab (127.0.0.1:8788)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/projects/openclaw-game-night-lab
+Environment=NODE_ENV=production
+Environment=PORT=8788
+ExecStart=/usr/bin/node server/index.js
+Restart=always
+RestartSec=3
+User=root
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
