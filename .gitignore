@@ -1,0 +1,21 @@
+node_modules/
+.env
+.env.*
+*.log
+.DS_Store
+
+# Project floor docs are private by default.
+VISION.md
+STATUS.md
+LOG.md
+DECISIONS.md
+ROADMAP.md
+RESOURCES.md
+CONTRIBUTING.md
+AGENTS.md
+CLAUDE.md
+rollouts/
+resources/
+docs/
+config/
+backups/

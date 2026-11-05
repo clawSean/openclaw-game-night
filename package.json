@@ -1,0 +1,11 @@
+{
+  "name": "openclaw-game-night",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Chat-native game night prototypes for OpenClaw.",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "check": "node --check server/index.js"
+  }
+}

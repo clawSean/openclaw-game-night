@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#041420">
+    <meta name="description" content="Five fast, tactile games built for Telegram.">
+    <title>Clawcade · OpenClaw Game Night</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"></div>
+    <main class="shell">
+      <header class="appbar">
+        <button id="backButton" class="nav-button hidden" type="button" aria-label="Back to game menu">←</button>
+        <div class="brand">
+          <p class="eyebrow">🌊 OpenClaw Game Night</p>
+          <h1 id="pageTitle">Clawcade</h1>
+        </div>
+        <button id="soundButton" class="nav-button" type="button" aria-label="Toggle sound" aria-pressed="true">♪</button>
+      </header>
+
+      <section id="menuView" class="view">
+        <section class="hero-card">
+          <div>
+            <span class="live-pill"><i></i> 5 games live</span>
+            <h2>Pick your poison.</h2>
+            <p>Fast rounds, sharp claws, absolutely no dignity required.</p>
+          </div>
+          <div class="hero-orb" aria-hidden="true">🦞</div>
+        </section>
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">The arcade</p>
+            <h2>Choose a game</h2>
+          </div>
+          <span id="recordCount" class="record-count">0 records</span>
+        </div>
+
+        <section id="gameGrid" class="game-grid" aria-label="Games"></section>
+
+        <aside class="tip-card">
+          <span>⚡</span>
+          <div><strong>Telegram native</strong><p>Haptics, full-screen play, saved records, zero setup.</p></div>
+        </aside>
+      </section>
+
+      <section id="gameView" class="view hidden" aria-live="polite">
+        <div id="gameMount"></div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
