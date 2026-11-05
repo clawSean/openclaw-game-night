@@ -1,7 +1,9 @@
 import { createServer } from "node:http";
+import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import { winningCells } from "../public/game-core.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const rootDir = join(__dirname, "..");
@@ -34,15 +36,22 @@ function createRoom(id) {
     starter: 0,
     round: 1,
     winner: null,
+    setWinner: null,
+    rematchReady: [],
+    winningCells: [],
     updatedAt: new Date().toISOString(),
     history: []
   };
 }
 
 function publicRoom(room) {
+  const publicPlayer = (player) => player && (({ token: privateToken, ...safe }) => safe)(player);
   return {
     ...room,
-    currentPlayer: room.players[room.turn % Math.max(room.players.length, 1)] || null
+    players: room.players.map(publicPlayer),
+    winner: publicPlayer(room.winner),
+    setWinner: publicPlayer(room.setWinner),
+    currentPlayer: publicPlayer(room.players[room.turn % Math.max(room.players.length, 1)] || null)
   };
 }
 
@@ -71,32 +80,7 @@ function cleanName(value) {
 }
 
 function token() {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-function checkWinner(board, row, col, mark) {
-  const directions = [
-    [0, 1],
-    [1, 0],
-    [1, 1],
-    [1, -1]
-  ];
-
-  for (const [dr, dc] of directions) {
-    let count = 1;
-    for (const sign of [-1, 1]) {
-      let r = row + dr * sign;
-      let c = col + dc * sign;
-      while (r >= 0 && r < rows && c >= 0 && c < columns && board[r][c] === mark) {
-        count += 1;
-        r += dr * sign;
-        c += dc * sign;
-      }
-    }
-    if (count >= 4) return true;
-  }
-
-  return false;
+  return randomBytes(16).toString("hex");
 }
 
 function boardFull(board) {
@@ -117,21 +101,24 @@ async function handleApi(req, res, parts) {
   if (req.method === "POST" && action === "join") {
     const body = await readJson(req);
     const name = cleanName(body.name) || `Player ${room.players.length + 1}`;
-    let player = room.players.find((item) => item.name.toLowerCase() === name.toLowerCase());
+    let player = room.players.find((item) => item.token === body.resumeToken);
     if (!player) {
       if (room.players.length >= 2) return json(res, 409, { error: "Claw Four is full" });
-      player = { id: token(), name, mark: room.players.length === 0 ? "R" : "Y" };
+      if (room.players.some((item) => item.name.toLowerCase() === name.toLowerCase())) {
+        return json(res, 409, { error: "That display name is already in this room" });
+      }
+      player = { id: token().slice(0, 12), token: token(), name, mark: room.players.length === 0 ? "R" : "Y", wins: 0 };
       room.players.push(player);
       room.history.push({ at: new Date().toISOString(), type: "join", text: `${name} joined` });
     }
     if (room.players.length === 2 && room.status === "lobby") room.status = "active";
     room.updatedAt = new Date().toISOString();
-    return json(res, 200, { player, room: publicRoom(room) });
+    return json(res, 200, { player: { id: player.id, token: player.token, name: player.name, mark: player.mark }, room: publicRoom(room) });
   }
 
   if (req.method === "POST" && action === "move") {
     const body = await readJson(req);
-    const player = room.players.find((item) => item.id === body.playerId);
+    const player = room.players.find((item) => item.token === body.playerToken);
     const col = Number(body.column);
     if (!player) return json(res, 403, { error: "join first" });
     if (room.status !== "active") return json(res, 409, { error: "game is not active" });
@@ -159,9 +146,12 @@ async function handleApi(req, res, parts) {
       text: `${player.name} dropped in column ${col + 1}`
     });
 
-    if (checkWinner(room.board, placedRow, col, player.mark)) {
+    room.winningCells = winningCells(room.board, placedRow, col, player.mark);
+    if (room.winningCells.length) {
       room.winner = player;
-      room.status = "finished";
+      player.wins += 1;
+      room.setWinner = player.wins >= 2 ? player : null;
+      room.status = room.setWinner ? "set-finished" : "finished";
     } else if (boardFull(room.board)) {
       room.status = "finished";
       room.winner = { id: "draw", name: "Draw", mark: "D" };
@@ -173,24 +163,38 @@ async function handleApi(req, res, parts) {
   }
 
   if (req.method === "POST" && action === "reset") {
+    const body = await readJson(req);
+    if (!room.players.some((item) => item.token === body.playerToken)) {
+      return json(res, 403, { error: "join first" });
+    }
     rooms.set(roomId, createRoom(roomId));
     return json(res, 200, { room: publicRoom(getRoom(roomId)) });
   }
 
   if (req.method === "POST" && action === "rematch") {
     const body = await readJson(req);
-    const player = room.players.find((item) => item.id === body.playerId);
+    const player = room.players.find((item) => item.token === body.playerToken);
     if (!player) return json(res, 403, { error: "join first" });
-    if (room.players.length !== 2 || room.status !== "finished") {
+    if (room.players.length !== 2 || !["finished", "set-finished"].includes(room.status)) {
       return json(res, 409, { error: "finish this game before a rematch" });
     }
+    if (!room.rematchReady.includes(player.id)) room.rematchReady.push(player.id);
+    room.history.push({ at: new Date().toISOString(), type: "ready", text: `${player.name} is ready` });
+    room.updatedAt = new Date().toISOString();
+    if (room.rematchReady.length < 2) return json(res, 200, { room: publicRoom(room) });
+
+    const newSet = room.status === "set-finished";
+    if (newSet) room.players.forEach((item) => { item.wins = 0; });
     room.starter = room.starter === 0 ? 1 : 0;
-    room.round += 1;
+    room.round = newSet ? 1 : room.round + 1;
     room.turn = room.starter;
     room.board = emptyBoard();
     room.winner = null;
+    room.setWinner = null;
+    room.rematchReady = [];
+    room.winningCells = [];
     room.status = "active";
-    room.history.push({ at: new Date().toISOString(), type: "rematch", text: `${player.name} started round ${room.round}` });
+    room.history.push({ at: new Date().toISOString(), type: "rematch", text: `${newSet ? "A new set" : `Round ${room.round}`} started` });
     room.updatedAt = new Date().toISOString();
     return json(res, 200, { room: publicRoom(room) });
   }

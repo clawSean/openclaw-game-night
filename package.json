@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node server/index.js",
-    "check": "node --check server/index.js && node --check public/app.js"
+    "check": "node --check server/index.js && node --check public/app.js && node --test test/*.test.js",
+    "test:browser": "node test/browser-lab.mjs"
   }
 }

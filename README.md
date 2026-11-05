@@ -3,22 +3,37 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-F7DF1E?logo=javascript&logoColor=000)
 ![Telegram](https://img.shields.io/badge/Telegram-Mini%20App-26A5E4?logo=telegram&logoColor=fff)
 
-A touch-first, sea-themed arcade built for Telegram. Five games, one tiny Node server, no build step or runtime dependencies.
+A touch-first, sea-themed arcade built for Telegram. The public build remains an
+alpha; the active design lab is deliberately narrowing the slate to one social
+game and three testable prototypes. See [`DESIGN.md`](DESIGN.md) for the
+hypotheses, reversal conditions, and human evidence plan.
 
 | Game | Loop |
 | --- | --- |
-| 🦞 Claw Four | Two-player connect four in a shared room |
-| 🐙 Kraken Sequence | Repeat a growing pattern as the tempo rises |
-| 💣 Abyss Sweep | Deduce a no-guess 5×5 minefield and race the clock |
-| 🐚 Shell Shuffle | Match eight pairs with move, time, and streak feedback |
-| ⚡ Reef Reflex | Five reaction strikes with false-start stakes |
+| 🦞 Claw Four | Consent-based best-of-three duel in a shared room |
+| 💣 Abyss Expedition | Solver-verified deduction boards with surface/descend commitment |
+| 🐙 Kraken Current | Fixed four-cue Normal/Reverse memory trials |
+| 🪼 Tide Tell | Rule-switching tap/hold/wait reads with Calm/Deep pressure |
 
-The four solo games keep native personal-best metrics in browser storage: level, clear time, moves, and reaction average. Telegram haptics and optional audio add feedback; ordinary browsers work too. Claw Four supports player-preserving rematches, but its shared room state is currently in memory and resets with the server process.
+The solo prototypes keep native personal-best metrics and an anonymous,
+session-scoped playtest trace in browser storage. The trace excludes Telegram
+identity, player names, and init data and can be copied from the menu. Telegram
+haptics and optional audio add redundant feedback; ordinary browsers work too.
+Claw Four supports player-preserving sets, but its shared room state is currently
+in memory and resets with the server process.
 
 ## Run
 
 ```sh
 npm start
+npm run check
+```
+
+The optional real-browser lab script expects a local CDP-enabled browser at
+`127.0.0.1:9223` and the app at `127.0.0.1:8788`:
+
+```sh
+npm run test:browser
 ```
 
 Open `http://127.0.0.1:8787/?room=my-room`. Add `&game=claw-four` (or any game ID) for a direct game link. Set `PORT` to override `8787`.
