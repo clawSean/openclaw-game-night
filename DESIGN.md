@@ -36,6 +36,16 @@ Primary and creator sources:
 
 ## Portfolio decision
 
+The earlier four-cabinet narrowing was a prototype triage tactic, not the
+product goal. The product goal is a broad 12–14 cabinet arcade with no filler.
+The coverage map, admission rule, research record, and phased cabinet slate are
+canonical in `ARCADE_PORTFOLIO.md`.
+
+The current four remain the laboratory floor. Wave 1 adds delayed spatial
+planning, deterministic trick-shot dexterity, discrete board optimization, and
+authored microgame comedy. Later waves add bluffing, co-op, words, rhythm,
+creative play, and routing.
+
 ### 1. Claw Four — keep and finish the social contract
 
 The opponent already supplies prediction, counterplay, stories, and replay

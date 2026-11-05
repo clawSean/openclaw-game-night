@@ -29,6 +29,27 @@ It is not a demo and the facilitator does not sell the games.
 
 Do not ask “Was it fun?” until the end. Polite opinions are weaker than behavior.
 
+## Eight-cabinet free-choice session
+
+The current staging slate deliberately covers different verbs. Play each once,
+then choose freely among all eight for five minutes.
+
+For the four new cabinets, record:
+
+- **Echo Wake:** did the player understand that the numbered tile was their own
+  delayed hazard; could they name the earlier move that caused a collision?
+- **Pearl Ricochet:** did the launch direction match expectation; did the player
+  plan a bank rather than merely retry harder?
+- **Shell Shift:** did the player plan around a whole row/column and the refill
+  forecast; did a chain feel earned or lucky?
+- **Clawcade Panic:** which command was misread; did the player laugh at or
+  remember a particular scene; did they replay to perfect the set?
+
+After free choice, also ask: **Which cabinet would you challenge a friend to
+play?** Same-session replay is useful but ambiguous. Record the first cabinet
+chosen in a later neutral session with no prompt, streak, reward, or featured
+placement.
+
 ## Observe
 
 For every cabinet:

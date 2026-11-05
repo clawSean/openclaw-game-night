@@ -2,9 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   expectedSequence,
+  echoWakeStep,
   generateDeducibleBoard,
   hashSeed,
+  reefClusters,
+  reflectPearl,
   seededRandom,
+  shiftReef,
   solveBoard,
   tideActionMatches,
   winningCells,
@@ -49,6 +53,30 @@ test('tide actions require the intended input', () => {
   }
   assert.equal(tideActionMatches('hold', 'tap'), false);
   assert.equal(tideActionMatches('wait', 'tap'), false);
+});
+
+test('echo wakes advance visibly and erupt on the promised turn', () => {
+  let state = { position: 24, wakes: [], pearls: [25], rocks: [] };
+  state = echoWakeStep(state, [3, 4]);
+  assert.equal(state.collected, true);
+  assert.deepEqual(state.wakes, [{ cell: 24, turns: 3 }]);
+  state = echoWakeStep(state, [2, 4]);
+  state = echoWakeStep(state, [2, 3]);
+  state = echoWakeStep(state, [3, 3]);
+  assert.equal(state.hit, true);
+  assert.deepEqual(state.erupted, [24]);
+});
+
+test('reef shifts wrap whole lines and clusters remain orthogonal', () => {
+  const board = [0, 1, 2, 3, 1, 1, 2, 3, 0, 2, 2, 3, 0, 1, 0, 3];
+  assert.deepEqual(shiftReef(board, 4, 'row', 0, 1).slice(0, 4), [3, 0, 1, 2]);
+  assert.deepEqual(shiftReef(board, 4, 'column', 0, -1).filter((_, i) => i % 4 === 0), [1, 0, 0, 0]);
+  assert.deepEqual(reefClusters([0, 0, 1, 2, 0, 3, 1, 2, 3, 3, 3, 2, 1, 1, 2, 2], 4).map((group) => group.length).sort(), [3, 4, 5]);
+});
+
+test('pearl reflections are deterministic at every wall', () => {
+  assert.deepEqual(reflectPearl({ x: 95, y: 50, vx: 10, vy: 0 }, 100, 100, 5), { x: 95, y: 50, vx: -10, vy: 0 });
+  assert.deepEqual(reflectPearl({ x: 50, y: 4, vx: 0, vy: -3 }, 100, 100, 5), { x: 50, y: 5, vx: 0, vy: 3 });
 });
 
 test('winning cells finds horizontal, vertical, and diagonal lines', () => {

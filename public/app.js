@@ -1,8 +1,12 @@
 import {
+  echoWakeStep,
   expectedSequence,
   generateDeducibleBoard,
   neighbors,
+  reefClusters,
+  reflectPearl,
   seededRandom,
+  shiftReef,
   tideActionMatches,
 } from './game-core.js';
 
@@ -35,14 +39,22 @@ const games = [
   { id: 'abyss-sweep', icon: '💣', name: 'Abyss Expedition', tag: 'DEDUCTION', desc: 'Clear the reef, then decide whether to risk the dive.', color: 'gold' },
   { id: 'kraken-sequence', icon: '🐙', name: 'Kraken Current', tag: 'MEMORY', desc: 'Hold four signals. Some currents run backward.', color: 'violet' },
   { id: 'tide-tell', icon: '🪼', name: 'Tide Tell', tag: 'READ & REACT', desc: 'Read the rule, resist the feint, and choose when to dive.', color: 'sea' },
+  { id: 'echo-wake', icon: '👻', name: 'Echo Wake', tag: 'OUTRUN YOUR PAST', desc: 'Collect pearls while your last moves erupt behind you.', color: 'blue' },
+  { id: 'pearl-ricochet', icon: '⚪', name: 'Pearl Ricochet', tag: 'TRICK SHOTS', desc: 'Bank one pearl through a living coral course.', color: 'gold' },
+  { id: 'shell-shift', icon: '🐚', name: 'Shell Shift', tag: 'BOARD TACTICS', desc: 'Move whole reef lines and engineer chain reactions.', color: 'coral' },
+  { id: 'clawcade-panic', icon: '🚨', name: 'Clawcade Panic', tag: 'MICROGAME GAUNTLET', desc: 'Six ridiculous emergencies. Read fast. Act faster.', color: 'violet' },
 ];
-const metricVersion = { 'abyss-sweep': 3, 'kraken-sequence': 2, 'tide-tell': 1 };
+const metricVersion = { 'abyss-sweep': 3, 'kraken-sequence': 2, 'tide-tell': 1, 'echo-wake': 1, 'pearl-ricochet': 1, 'shell-shift': 1, 'clawcade-panic': 1 };
 const key = (id) => `clawcade:best:${id}${metricVersion[id] ? `:v${metricVersion[id]}` : ''}`;
 const best = (id) => Number(localStorage.getItem(key(id)) || 0);
 function formatScore(id, value) {
   if (id === 'kraken-sequence') return `${value} currents`;
   if (id === 'abyss-sweep') return `depth ${value}`;
   if (id === 'tide-tell') return `${value} reads`;
+  if (id === 'echo-wake') return `${value} pearls`;
+  if (id === 'pearl-ricochet') return `${value} gates`;
+  if (id === 'shell-shift') return `${value} shells`;
+  if (id === 'clawcade-panic') return `${value} saves`;
   return String(value);
 }
 function formatBest(id, value = best(id)) { return value ? formatScore(id, value) : '' ; }
@@ -94,6 +106,10 @@ function open(id, { write = 'replace' } = {}) {
   if (id === 'kraken-sequence') cleanup = sequence();
   if (id === 'abyss-sweep') cleanup = sweep();
   if (id === 'tide-tell') cleanup = tideTell();
+  if (id === 'echo-wake') cleanup = echoWake();
+  if (id === 'pearl-ricochet') cleanup = pearlRicochet();
+  if (id === 'shell-shift') cleanup = shellShift();
+  if (id === 'clawcade-panic') cleanup = clawcadePanic();
   if (id === 'claw-four') cleanup = clawFour();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -416,6 +432,189 @@ function tideTell() {
   $('#start').onclick = chooseCurrent;
   renderRule();
   return () => { active = false; clearTimeout(cueTimer); clearTimeout(holdTimer); };
+}
+
+function echoWake() {
+  const size = 7;
+  const rocks = [9, 11, 15, 19, 29, 33, 37, 39];
+  const random = seededRandom(`${new Date().toISOString().slice(0, 10)}:${roomId}:echo`);
+  shell('👻', 'DELAYED SPATIAL PLANNING / LAB', 'Tap an adjacent tile. Every move leaves a wake that erupts in three turns—collect seven pearls without colliding with your own past.', `<div class="scorebar"><span>PEARLS <strong id="echoScore">0 / 7</strong></span><span>MOVES <strong id="echoMoves">0 / 28</strong></span><span>WAKE <strong>3 turns</strong></span></div><div class="echo-grid" id="echoGrid" role="grid" aria-label="Echo Wake reef"></div><p class="game-status" id="status">Numbered wakes show exactly when they erupt.</p><div id="result"><button class="primary-action" id="start">Enter the wake →</button></div>`);
+  const grid = $('#echoGrid');
+  grid.innerHTML = Array.from({ length: size * size }, (_, cell) => `<button class="echo-cell" data-cell="${cell}" role="gridcell" aria-label="Reef tile ${cell + 1}"></button>`).join('');
+  let state, score, moves, over = true, run = 0;
+  function spawnPearl() {
+    const blocked = new Set([state.position, ...rocks, ...state.wakes.map((wake) => wake.cell)]);
+    const choices = Array.from({ length: size * size }, (_, cell) => cell).filter((cell) => !blocked.has(cell));
+    state.pearls = [choices[Math.floor(random() * choices.length)]];
+  }
+  function draw(erupted = []) {
+    const wakeMap = new Map(state.wakes.map((wake) => [wake.cell, wake.turns]));
+    grid.querySelectorAll('[data-cell]').forEach((tile) => {
+      const cell = Number(tile.dataset.cell);
+      const row = Math.floor(cell / size), column = cell % size;
+      const wake = wakeMap.get(cell);
+      const isRock = rocks.includes(cell), isPearl = state.pearls.includes(cell), isPlayer = cell === state.position;
+      tile.className = `echo-cell ${isRock ? 'rock' : ''} ${wake ? `wake wake-${wake}` : ''} ${erupted.includes(cell) ? 'erupted' : ''}`;
+      tile.textContent = isPlayer ? '🦞' : isPearl ? '⚪' : isRock ? '🪨' : wake ? String(wake) : '';
+      tile.disabled = over || isRock;
+      tile.setAttribute('aria-label', `Row ${row + 1}, column ${column + 1}${isPlayer ? ', your lobster' : isPearl ? ', pearl' : isRock ? ', rock' : wake ? `, wake erupts in ${wake}` : ', clear'}`);
+    });
+    $('#echoScore').textContent = `${score} / 7`; $('#echoMoves').textContent = `${moves} / 28`;
+  }
+  function end(message, detail) {
+    over = true; draw(); finish(message, score, current, { scoreLabel: `${score} pearl${score === 1 ? '' : 's'} recovered`, detail }); $('#again').onclick = reset;
+  }
+  function move(cell) {
+    if (over) return;
+    const row = Math.floor(state.position / size), column = state.position % size;
+    const nextRow = Math.floor(cell / size), nextColumn = cell % size;
+    if (Math.abs(row - nextRow) + Math.abs(column - nextColumn) !== 1) return note('Move one adjacent tile');
+    const previous = state.position;
+    const next = echoWakeStep(state, [nextRow, nextColumn], size, 3);
+    if (next.error) return note(next.error === 'rock' ? 'A rock blocks that route' : 'The reef ends there');
+    state = next; moves += 1;
+    if (state.collected) { score += 1; beep(720, .08); vibrate('medium'); if (score < 7) spawnPearl(); }
+    draw(state.erupted);
+    track('echo_move', { run, move: moves, from: previous, to: cell, collected: state.collected, hit: state.hit });
+    if (state.hit) return end('Caught by your own wake', `Move ${moves} returned to a tile you armed three turns earlier`);
+    if (score >= 7) return end('Wake mastered!', `${moves} moves · every eruption was visible`);
+    if (moves >= 28) return end('The tide closed', 'You ran out of moves before the seventh pearl');
+    $('#status').textContent = state.wakes.some((wake) => wake.turns === 1) ? 'A wake erupts after your next move.' : 'Plan around the numbered wakes.';
+  }
+  function reset() {
+    run += 1; score = 0; moves = 0; over = false;
+    state = { position: 24, wakes: [], pearls: [], rocks: [...rocks] };
+    spawnPearl(); $('#result').replaceChildren(); $('#status').textContent = 'Collect seven pearls. Your old tile starts a three-turn countdown.'; draw();
+  }
+  grid.querySelectorAll('[data-cell]').forEach((tile) => tile.onclick = () => move(Number(tile.dataset.cell)));
+  $('#start').onclick = reset;
+  state = { position: 24, wakes: [], pearls: [3], rocks: [...rocks] }; score = 0; moves = 0; draw();
+  return () => { over = true; };
+}
+
+function pearlRicochet() {
+  shell('⚪', 'DEXTERITY + PLANNING / LAB', 'Drag from the pearl toward your target, then release. Bank through the numbered gates in order before four shots run out.', `<div class="scorebar"><span>GATES <strong id="ricochetScore">0 / 4</strong></span><span>SHOTS <strong id="ricochetShots">4</strong></span><span>COURSE <strong>Daily</strong></span></div><div class="ricochet-wrap"><canvas id="ricochetCanvas" width="640" height="720" aria-label="Pearl Ricochet course"></canvas></div><div class="ricochet-controls" aria-label="Accessible aim controls"><button id="aimLeft" aria-label="Rotate aim left">↶ Aim</button><button id="firePearl">Fire</button><button id="aimRight" aria-label="Rotate aim right">Aim ↷</button></div><p class="game-status" id="status">Drag to aim, or use the three aim controls.</p><div id="result"><button class="primary-action" id="start">Rack the pearl →</button></div>`);
+  const canvas = $('#ricochetCanvas'), context = canvas.getContext('2d');
+  const width = canvas.width, height = canvas.height;
+  const gates = [{ x: 170, y: 530 }, { x: 485, y: 410 }, { x: 200, y: 250 }, { x: 500, y: 110 }];
+  let pearl, gate, shots, aiming = false, aim, aimAngle = -Math.PI / 4, moving = false, frame, over = true, ticks = 0;
+  const point = (event) => { const rect = canvas.getBoundingClientRect(); return { x: (event.clientX - rect.left) * width / rect.width, y: (event.clientY - rect.top) * height / rect.height }; };
+  function draw() {
+    context.clearRect(0, 0, width, height);
+    const gradient = context.createLinearGradient(0, 0, 0, height); gradient.addColorStop(0, '#0b4661'); gradient.addColorStop(1, '#031622'); context.fillStyle = gradient; context.fillRect(0, 0, width, height);
+    context.strokeStyle = '#1d6a75'; context.lineWidth = 10; context.strokeRect(5, 5, width - 10, height - 10);
+    gates.forEach((item, index) => { context.beginPath(); context.arc(item.x, item.y, 30, 0, Math.PI * 2); context.fillStyle = index < gate ? '#0f6c5d' : index === gate ? '#ffc94d' : '#173d50'; context.fill(); context.strokeStyle = index === gate ? '#fff1a7' : '#39748a'; context.lineWidth = 5; context.stroke(); context.fillStyle = '#041420'; context.font = 'bold 28px system-ui'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(String(index + 1), item.x, item.y); });
+    const guide = aiming && aim ? aim : { x: pearl.x + Math.cos(aimAngle) * 150, y: pearl.y + Math.sin(aimAngle) * 150 };
+    if (!moving) { context.setLineDash([12, 10]); context.strokeStyle = '#eef8f4'; context.lineWidth = 4; context.beginPath(); context.moveTo(pearl.x, pearl.y); context.lineTo(guide.x, guide.y); context.stroke(); context.setLineDash([]); }
+    context.beginPath(); context.arc(pearl.x, pearl.y, 18, 0, Math.PI * 2); context.fillStyle = '#fff8dc'; context.shadowColor = '#ffffff'; context.shadowBlur = 18; context.fill(); context.shadowBlur = 0; context.strokeStyle = '#ffc94d'; context.lineWidth = 4; context.stroke();
+  }
+  function stop(message) {
+    moving = false; cancelAnimationFrame(frame); pearl.vx = 0; pearl.vy = 0; draw();
+    if (gate >= gates.length) { over = true; finish('Course cleared!', gate, current, { scoreLabel: 'All four gates', detail: `${4 - shots} shot${4 - shots === 1 ? '' : 's'} used` }); $('#again').onclick = reset; return; }
+    if (!shots) { over = true; finish('Pearl spent', gate, current, { scoreLabel: `${gate} gate${gate === 1 ? '' : 's'} cleared`, detail: `Needed gate ${gate + 1} next` }); $('#again').onclick = reset; return; }
+    $('#status').textContent = message || `Gate ${gate + 1} is still open. ${shots} shot${shots === 1 ? '' : 's'} left.`;
+  }
+  function animate() {
+    if (!moving) return;
+    pearl = reflectPearl(pearl, width, height, 18); ticks += 1;
+    pearl.vx *= .996; pearl.vy *= .996;
+    const target = gates[gate];
+    if (target && Math.hypot(pearl.x - target.x, pearl.y - target.y) < 42) { gate += 1; beep(560 + gate * 70, .08); vibrate('medium'); $('#ricochetScore').textContent = `${gate} / 4`; }
+    draw();
+    if (ticks > 560 || Math.hypot(pearl.vx, pearl.vy) < .35) return stop();
+    frame = requestAnimationFrame(animate);
+  }
+  function launch(dx, dy) {
+    if (moving || over) return;
+    const distance = Math.hypot(dx, dy);
+    if (distance < 30) return draw();
+    aimAngle = Math.atan2(dy, dx); const speed = Math.min(10, Math.max(4.5, distance / 22)); pearl.vx = dx / distance * speed; pearl.vy = dy / distance * speed;
+    shots -= 1; ticks = 0; moving = true; $('#ricochetShots').textContent = shots; $('#status').textContent = 'Pearl away—read the rebound.'; track('ricochet_shot', { gate: gate + 1, shotsLeft: shots, speed: Number(speed.toFixed(2)) }); animate();
+  }
+  function release(event) { if (!aiming || moving || over) return; aim = point(event); aiming = false; launch(aim.x - pearl.x, aim.y - pearl.y); }
+  canvas.onpointerdown = (event) => { if (moving || over) return; const cursor = point(event); if (Math.hypot(cursor.x - pearl.x, cursor.y - pearl.y) > 55) return note('Start your drag on the pearl'); aiming = true; aim = cursor; canvas.setPointerCapture?.(event.pointerId); draw(); };
+  canvas.onpointermove = (event) => { if (!aiming) return; aim = point(event); draw(); };
+  canvas.onpointerup = release; canvas.onpointercancel = () => { aiming = false; draw(); };
+  $('#aimLeft').onclick = () => { if (!moving && !over) { aimAngle -= Math.PI / 18; draw(); } }; $('#aimRight').onclick = () => { if (!moving && !over) { aimAngle += Math.PI / 18; draw(); } }; $('#firePearl').onclick = () => launch(Math.cos(aimAngle) * 150, Math.sin(aimAngle) * 150);
+  function reset() { cancelAnimationFrame(frame); pearl = { x: 85, y: 650, vx: 0, vy: 0 }; gate = 0; shots = 4; aimAngle = Math.atan2(gates[0].y - pearl.y, gates[0].x - pearl.x); over = false; moving = false; aiming = false; aim = null; $('#ricochetScore').textContent = '0 / 4'; $('#ricochetShots').textContent = '4'; $('#result').replaceChildren(); $('#status').textContent = 'Drag from the pearl toward gate 1. Wall banks are encouraged.'; draw(); }
+  pearl = { x: 85, y: 650, vx: 0, vy: 0 }; gate = 0; shots = 4; draw(); $('#start').onclick = reset;
+  return () => { over = true; cancelAnimationFrame(frame); };
+}
+
+function shellShift() {
+  const size = 5, icons = ['🐚', '🪸', '⭐', '🦀'];
+  const random = seededRandom(`${new Date().toISOString().slice(0, 10)}:${roomId}:shell-shift`);
+  shell('🐚', 'DISCRETE BOARD TACTICS / LAB', 'Select a row or column, then shift the whole current. Groups of three or more clear; the visible forecast refills the reef.', `<div class="scorebar"><span>SHELLS <strong id="shiftScore">0</strong></span><span>MOVES <strong id="shiftMoves">12</strong></span><span>CHAIN <strong id="shiftChain">—</strong></span></div><div class="forecast-card">NEXT CURRENT <strong id="forecast"></strong></div><div class="shift-grid" id="shiftGrid" role="grid" aria-label="Shell Shift reef"></div><div class="shift-controls"><button class="secondary-action" id="rowMode" aria-pressed="true">Shift row</button><button class="secondary-action" id="columnMode" aria-pressed="false">Shift column</button><button aria-label="Shift selected line backward" id="shiftBack">← / ↑</button><button aria-label="Shift selected line forward" id="shiftForward">→ / ↓</button></div><p class="game-status" id="status">Choose a line, then move the current.</p><div id="result"><button class="primary-action" id="start">Wake the reef →</button></div>`);
+  const grid = $('#shiftGrid');
+  grid.innerHTML = Array.from({ length: size * size }, (_, cell) => `<button class="shift-cell" data-cell="${cell}" role="gridcell"></button>`).join('');
+  let board = [], forecast = [], axis = 'row', selected = 2, moves = 12, score = 0, over = true;
+  const nextIcon = () => Math.floor(random() * icons.length);
+  function draw(highlight = []) {
+    const selectedCells = new Set(Array.from({ length: size }, (_, offset) => axis === 'row' ? selected * size + offset : offset * size + selected));
+    grid.querySelectorAll('[data-cell]').forEach((tile) => { const cell = Number(tile.dataset.cell); tile.textContent = icons[board[cell]]; tile.className = `shift-cell ${selectedCells.has(cell) ? 'selected' : ''} ${highlight.includes(cell) ? 'clearing' : ''}`; tile.disabled = over; tile.setAttribute('aria-label', `Row ${Math.floor(cell / size) + 1}, column ${cell % size + 1}, ${icons[board[cell]]}${selectedCells.has(cell) ? ', selected line' : ''}`); });
+    $('#forecast').textContent = forecast.map((value) => icons[value]).join(' '); $('#shiftScore').textContent = score; $('#shiftMoves').textContent = moves;
+  }
+  function settle() {
+    let chain = 0, total = 0, clusters;
+    while ((clusters = reefClusters(board, size)).length && chain < 4) {
+      chain += 1; const cleared = [...new Set(clusters.flat())]; total += cleared.length * chain;
+      cleared.forEach((cell) => { board[cell] = null; });
+      for (let column = 0; column < size; column += 1) {
+        const kept = Array.from({ length: size }, (_, row) => board[row * size + column]).filter((value) => value != null);
+        while (kept.length < size) { kept.unshift(forecast.shift()); forecast.push(nextIcon()); }
+        kept.forEach((value, row) => { board[row * size + column] = value; });
+      }
+    }
+    score += total; $('#shiftChain').textContent = chain ? `${chain}×` : '—';
+    if (chain) { beep(520 + chain * 90, .1); vibrate(chain > 1 ? 'heavy' : 'medium'); $('#status').textContent = `${total} shells cleared${chain > 1 ? ` in a ${chain}× chain` : ''}.`; }
+    else $('#status').textContent = 'No cluster. Use the forecast to set up the next current.';
+  }
+  function shift(amount) {
+    if (over) return; board = shiftReef(board, size, axis, selected, amount); moves -= 1; settle(); draw(); track('shell_shift', { axis, selected, amount, moves, score });
+    if (!moves) { over = true; draw(); finish('Tide exhausted', score, current, { scoreLabel: `${score} shell points`, detail: 'Whole-line planning beats lucky swaps' }); $('#again').onclick = reset; }
+  }
+  function setAxis(next) { axis = next; $('#rowMode').setAttribute('aria-pressed', String(axis === 'row')); $('#columnMode').setAttribute('aria-pressed', String(axis === 'column')); draw(); }
+  grid.querySelectorAll('[data-cell]').forEach((tile) => tile.onclick = () => { const cell = Number(tile.dataset.cell); selected = axis === 'row' ? Math.floor(cell / size) : cell % size; draw(); });
+  $('#rowMode').onclick = () => setAxis('row'); $('#columnMode').onclick = () => setAxis('column'); $('#shiftBack').onclick = () => shift(-1); $('#shiftForward').onclick = () => shift(1);
+  function reset() { board = Array.from({ length: size * size }, nextIcon); forecast = Array.from({ length: 10 }, nextIcon); axis = 'row'; selected = 2; moves = 12; score = 0; over = false; $('#result').replaceChildren(); $('#status').textContent = 'Select a row, then shift it. Three touching shells clear.'; setAxis('row'); }
+  board = Array.from({ length: size * size }, nextIcon); forecast = Array.from({ length: 10 }, nextIcon); draw(); $('#start').onclick = reset;
+  return () => { over = true; };
+}
+
+function clawcadePanic() {
+  const scenes = [
+    { command: 'CRACK THE CLAM!', hint: 'Tap the closed shell', html: '<button data-win="tap" class="panic-prop giant">🦪</button><span class="panic-prop decoy">🐚</span>' },
+    { command: 'HOLD THE AIRLOCK!', hint: 'Press and hold until it seals', html: '<button data-win="hold" class="panic-prop giant">🛞</button><span class="panic-spray">💦 💦</span>' },
+    { command: 'DON’T WAKE THE KRAKEN!', hint: 'Hands off. Let it sleep.', html: '<button data-lose="touch" class="panic-prop giant sleeping">🐙<small>z z z</small></button>' },
+    { command: 'FIND THE IMPOSTER!', hint: 'One crab faces the wrong way', html: '<div class="panic-choices"><button>🦀</button><button>🦀</button><button data-win="tap">🦞</button><button>🦀</button></div>' },
+    { command: 'POP THE BIG ONE!', hint: 'Size matters', html: '<div class="panic-choices bubbles"><button>◯</button><button data-win="tap">◉</button><button>○</button><button>∘</button></div>' },
+    { command: 'CUT THE RED WIRE!', hint: 'Not coral. Not orange. Red.', html: '<div class="panic-wires"><button>🟠</button><button data-win="tap">🔴</button><button>🟣</button></div>' },
+  ];
+  shell('🚨', 'AUTHORED MICROGAME GAUNTLET / LAB', 'Six original emergencies. Read the command, then tap, hold, or deliberately do nothing before the siren closes.', `<div class="scorebar"><span>SAVED <strong id="panicScore">0</strong></span><span>SCENE <strong id="panicScene">0 / 6</strong></span><span>TIME <strong id="panicTime">—</strong></span></div><div class="panic-stage" id="panicStage"><div class="panic-command" id="panicCommand">READY?</div><p id="panicHint">Commands are short. The joke is visual. Failure is immediate.</p><div id="panicProps" class="panic-props">🚨</div></div><p class="game-status" id="status">No scene should need an explanation after the command.</p><div id="result"><button class="primary-action" id="start">Start the panic →</button></div>`);
+  let index = 0, score = 0, active = false, timer, ticker, deadline, holdTimer, alive = true;
+  function resolve(won, why) {
+    if (!active) return; active = false; clearTimeout(timer); clearTimeout(holdTimer); clearInterval(ticker);
+    track('panic_scene', { scene: index + 1, won, why });
+    if (won) { score += 1; beep(690, .08); vibrate('medium'); $('#status').textContent = `${scenes[index].command.replace('!', '')} — saved.`; }
+    else { beep(145, .15); vibrate('heavy'); $('#status').textContent = why; }
+    $('#panicScore').textContent = score; $('#panicStage').classList.toggle('failed', !won); index += 1; setTimeout(next, 520);
+  }
+  function next() {
+    if (!alive) return;
+    if (index >= scenes.length) { finish(score === scenes.length ? 'Perfect panic!' : 'Shift survived', score, current, { scoreLabel: `${score} of ${scenes.length} emergencies saved`, detail: score === scenes.length ? 'Every command read cleanly' : 'Replay is one tap away' }); $('#again').onclick = reset; return; }
+    const scene = scenes[index]; active = true; $('#panicStage').classList.remove('failed'); $('#panicCommand').textContent = scene.command; $('#panicHint').textContent = scene.hint; $('#panicProps').innerHTML = scene.html; $('#panicScene').textContent = `${index + 1} / ${scenes.length}`;
+    deadline = performance.now() + (scene.command.includes('KRAKEN') ? 1800 : 3000); clearInterval(ticker); ticker = setInterval(() => { $('#panicTime').textContent = `${Math.max(0, (deadline - performance.now()) / 1000).toFixed(1)}s`; }, 80);
+    $('#panicProps').querySelectorAll('button').forEach((button) => {
+      button.onclick = () => { if (button.dataset.win === 'tap') resolve(true, 'Clean action'); else if (button.dataset.lose) resolve(false, 'You woke the kraken. The command said do nothing.'); else resolve(false, 'Wrong target—the command and scene disagreed.'); };
+      if (button.dataset.win === 'hold') {
+        button.onclick = null; button.onpointerdown = (event) => { event.preventDefault(); holdTimer = setTimeout(() => resolve(true, 'Airlock sealed'), 700); }; button.onpointerup = () => { clearTimeout(holdTimer); if (active) resolve(false, 'Released before the airlock sealed.'); }; button.onpointercancel = () => clearTimeout(holdTimer);
+      }
+    });
+    timer = setTimeout(() => resolve(scene.command.includes('KRAKEN'), scene.command.includes('KRAKEN') ? 'Perfect restraint' : 'Time ran out before the command was completed.'), deadline - performance.now());
+  }
+  function reset() { clearTimeout(timer); clearTimeout(holdTimer); clearInterval(ticker); index = 0; score = 0; active = false; $('#panicScore').textContent = '0'; $('#result').replaceChildren(); $('#status').textContent = 'Read the command—not the loudest object.'; next(); }
+  $('#start').onclick = reset;
+  return () => { alive = false; active = false; clearTimeout(timer); clearTimeout(holdTimer); clearInterval(ticker); };
 }
 
 function clawFour(){

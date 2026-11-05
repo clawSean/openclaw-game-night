@@ -128,9 +128,40 @@ if (deepAction === 'DON’T TOUCH') {
 await sleep(1000);
 assert.match(await evaluate(`document.querySelector('#result').textContent`), /Deep Dive broken/);
 
+// Echo Wake: start, make two legal moves, and prove the delayed queue is
+// visible rather than hidden RNG.
+await navigate('echo-wake');
+await click('#start');
+await click('[data-cell="25"]');
+await click('[data-cell="26"]');
+assert.match(await evaluate(`document.querySelector('#echoGrid').textContent`), /[23]/);
+assert.equal(await evaluate(`document.querySelector('#echoMoves').textContent`), '2 / 28');
+
+// Pearl Ricochet: an actual pointer drag launches one deterministic shot.
+await navigate('pearl-ricochet');
+await click('#start');
+await evaluate(`(()=>{const c=document.querySelector('#ricochetCanvas'),r=c.getBoundingClientRect();const p=(x,y,type)=>c.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:1,clientX:r.left+x/640*r.width,clientY:r.top+y/720*r.height}));p(85,650,'pointerdown');p(170,530,'pointermove');p(170,530,'pointerup')})()`);
+await sleep(200);
+assert.equal(await evaluate(`document.querySelector('#ricochetShots').textContent`), '3');
+
+// Shell Shift: select a line, move the whole current, and consume one move.
+await navigate('shell-shift');
+await click('#start');
+await click('[data-cell="10"]');
+await click('#shiftForward');
+assert.equal(await evaluate(`document.querySelector('#shiftMoves').textContent`), '11');
+
+// Panic: the first authored command accepts only its intended prop.
+await navigate('clawcade-panic');
+await click('#start');
+assert.match(await evaluate(`document.querySelector('#panicCommand').textContent`), /CRACK THE CLAM/);
+await click('[data-win="tap"]');
+await sleep(650);
+assert.equal(await evaluate(`document.querySelector('#panicScore').textContent`), '1');
+
 for (const width of [360, 430]) {
   await send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: true });
-  for (const game of ['claw-four', 'abyss-sweep', 'kraken-sequence', 'tide-tell']) {
+  for (const game of ['claw-four', 'abyss-sweep', 'kraken-sequence', 'tide-tell', 'echo-wake', 'pearl-ricochet', 'shell-shift', 'clawcade-panic']) {
     await send('Page.navigate', { url: `${appOrigin}/?room=${room}&game=${game}` });
     await sleep(180);
     assert.equal(await evaluate('document.documentElement.scrollWidth'), width, `${game} overflows at ${width}px`);
@@ -139,5 +170,5 @@ for (const width of [360, 430]) {
 }
 
 assert.deepEqual(browserErrors, []);
-console.log('browser lab passed: Kraken 3 trials; Abyss 2 depths + surface; Tide calm clear + deep failure; Claw/API set contract; 360–430px no overflow/unnamed buttons/errors');
+console.log('browser lab passed: 8 cabinets; legacy full flows; Echo delayed queue; Ricochet drag; Shell whole-line shift; Panic authored action; 360–430px no overflow/unnamed buttons/errors');
 socket.close();
