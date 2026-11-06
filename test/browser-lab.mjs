@@ -104,6 +104,11 @@ await click('#start');
 assert.match(await evaluate(`document.querySelector('#level').textContent`), /1/);
 await navigate('abyss-sweep');
 assert.equal(await evaluate(`document.querySelectorAll('[data-tile]').length`), 25);
+await click('#flagMode');
+assert.match(await evaluate(`document.querySelector('#inputMode').textContent`), /FLAG ONE TILE/);
+await click('[data-tile="0"]');
+assert.equal(await evaluate(`document.querySelector('[data-tile="0"]').textContent`), '🚩');
+assert.match(await evaluate(`document.querySelector('#inputMode').textContent`), /REVEAL/);
 await click('[data-tile="12"]');
 assert.notEqual(await evaluate(`document.querySelector('#safe').textContent`), '0 / 21');
 await navigate('shell-shuffle');
@@ -119,6 +124,7 @@ assert.match(await evaluate(`document.querySelector('#reactionText').textContent
 await navigate('tide-tell');
 await click('#start');
 await click('#calm');
+await sleep(950);
 for (let cue = 0; cue < 6; cue += 1) {
   await sleep(120);
   const state = await evaluate(`(()=>{const name=document.querySelector('#tellName').textContent;const row=[...document.querySelectorAll('#ruleBoard>div')].find(item=>item.querySelector('span').textContent.includes(name));return{name,action:row.querySelector('strong').textContent}})()`);
@@ -137,7 +143,9 @@ for (let cue = 0; cue < 6; cue += 1) {
 }
 assert.equal(await evaluate(`Boolean(document.querySelector('#deep'))`), true);
 await click('#deep');
-await sleep(150);
+assert.match(await evaluate(`document.querySelector('#deep').textContent`), /Confirm/);
+await click('#deep');
+await sleep(1000);
 const deepAction = await evaluate(`(()=>{const name=document.querySelector('#tellName').textContent;const row=[...document.querySelectorAll('#ruleBoard>div')].find(item=>item.querySelector('span').textContent.includes(name));return row.querySelector('strong').textContent})()`);
 if (deepAction === 'DON’T TOUCH') {
   await evaluate(`(()=>{const z=document.querySelector('#tellZone');z.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));z.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}))})()`);

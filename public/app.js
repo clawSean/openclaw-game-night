@@ -154,18 +154,19 @@ function finish(message, score, id, { lower = false, scoreLabel = formatScore(id
 function legacySequence() {
   const symbols = ['🪸', '🐙', '🐡', '🦀'];
   const cueNames = ['Coral', 'Octopus', 'Puffer', 'Crab'];
-  shell('🐙', 'MEMORY / SOLO', 'Watch the lights. Repeat the entire pattern. One wrong tap ends the dive.', `<div class="scorebar"><span>LEVEL <strong id="level">0</strong></span><span>BEST <strong>${best(current)}</strong></span></div><div class="sequence-grid">${symbols.map((symbol, index) => `<button class="sequence-pad pad-${index}" data-pad="${index}" aria-label="${cueNames[index]}">${symbol}</button>`).join('')}</div><p id="cue" class="sr-only" role="status" aria-live="assertive" aria-atomic="true"></p><p class="game-status" id="status">Ready to dive?</p><button id="tempoMode" class="secondary-action" aria-pressed="false">⚡ Rising tide tempo</button><div id="result"><button id="start" class="primary-action">Start sequence →</button></div>`);
+  shell('🐙', 'MEMORY / SOLO', 'Watch the lights. Repeat the entire pattern. One wrong tap ends the dive.', `<div class="scorebar"><span>LEVEL <strong id="level">0</strong></span><span>BEST <strong>${best(current)}</strong></span></div><div class="sequence-grid">${symbols.map((symbol, index) => `<button class="sequence-pad pad-${index}" data-pad="${index}" aria-label="${cueNames[index]}" disabled>${symbol}</button>`).join('')}</div><p id="cue" class="sr-only" role="status" aria-live="assertive" aria-atomic="true"></p><p class="game-status" id="status">Ready to dive?</p><button id="tempoMode" class="secondary-action" aria-pressed="false">⚡ Rising tide tempo</button><div id="result"><button id="start" class="primary-action">Start sequence →</button></div>`);
   let pattern = [], index = 0, playing = false, alive = true, relaxed = false;
   const timers = new Set();
+  const setPadsEnabled = (enabled) => mount.querySelectorAll('[data-pad]').forEach((pad) => { pad.disabled = !enabled; });
   function later(fn, ms) { const timer = setTimeout(() => { timers.delete(timer); if (alive) fn(); }, ms); timers.add(timer); }
   function flash(padIndex) { const pad = $(`[data-pad="${padIndex}"]`); pad.classList.add('lit'); $('#cue').textContent = cueNames[padIndex]; beep(270 + padIndex * 125, .22); vibrate(); later(() => pad.classList.remove('lit'), relaxed ? 520 : 360); }
   function next() {
-    pattern.push(Math.floor(Math.random() * 4)); index = 0; playing = true;
+    pattern.push(Math.floor(Math.random() * 4)); index = 0; playing = true; setPadsEnabled(false);
     $('#level').textContent = pattern.length;
     const interval = relaxed ? 1050 : pattern.length >= 13 ? 380 : pattern.length >= 9 ? 450 : pattern.length >= 5 ? 550 : 650;
     $('#status').textContent = pattern.length > 1 ? `Level ${pattern.length}. Watch carefully…` : 'Watch carefully…';
     pattern.forEach((padIndex, cueIndex) => later(() => flash(padIndex), 700 + cueIndex * interval));
-    later(() => { playing = false; $('#status').textContent = 'Your turn. Repeat the pattern!'; }, 700 + pattern.length * interval);
+    later(() => { playing = false; setPadsEnabled(true); $('#status').textContent = 'YOUR TURN · Repeat the pattern!'; }, 700 + pattern.length * interval);
   }
   $('#tempoMode').onclick = () => { if (pattern.length) return note('Tempo locks during a dive'); relaxed = !relaxed; $('#tempoMode').textContent = relaxed ? '🌙 Relaxed tempo' : '⚡ Rising tide tempo'; $('#tempoMode').setAttribute('aria-pressed', String(relaxed)); vibrate(); };
   $('#start').onclick = () => { $('#result').replaceChildren(); next(); };
@@ -173,28 +174,29 @@ function legacySequence() {
     if (playing || !pattern.length) return;
     const guess = Number(pad.dataset.pad); flash(guess);
     if (guess !== pattern[index]) {
-      playing = true; $('#status').textContent = 'The Kraken caught you.';
+      playing = true; setPadsEnabled(false); $('#status').textContent = 'The Kraken caught you.';
       finish(`You reached level ${pattern.length - 1}`, pattern.length - 1, current);
       $('#again').onclick = () => { timers.forEach(clearTimeout); timers.clear(); pattern = []; playing = false; $('#result').replaceChildren(); next(); };
-    } else if (++index === pattern.length) { playing = true; $('#status').textContent = `Level ${pattern.length} clear. Going deeper…`; later(next, 900); }
+    } else if (++index === pattern.length) { playing = true; setPadsEnabled(false); $('#status').textContent = `Level ${pattern.length} clear. Going deeper…`; later(next, 900); }
   }; });
   return () => { alive = false; timers.forEach(clearTimeout); };
 }
 function legacySweep() {
-  shell('💣', 'LOGIC / SOLO', 'Reveal safe tiles. Numbers show adjacent mines. Flag suspects; clear every safe tile to win.', `<div class="scorebar"><span>SAFE <strong id="safe">0 / 21</strong></span><span>FLAGS <strong id="flags">0 / 4</strong></span><span>TIME <strong id="time">0.0s</strong></span></div><div class="sweep-grid" id="sweepGrid"></div><p class="game-status" id="status">Your first tap opens a safe pocket.</p><button class="secondary-action" id="flagMode" aria-pressed="false">🚩 Flag mode: off</button><div id="result"></div>`);
+  shell('💣', 'LOGIC / SOLO', 'Reveal safe tiles. Numbers show adjacent mines. Flag suspects; clear every safe tile to win.', `<div class="scorebar"><span>SAFE <strong id="safe">0 / 21</strong></span><span>FLAGS <strong id="flags">0 / 4</strong></span><span>TIME <strong id="time">0.0s</strong></span></div><div class="input-mode-panel"><strong id="inputMode" aria-live="polite">👆 NEXT TAP: REVEAL</strong><small>Flag is one-shot · long-press also flags</small><div class="mode-actions"><button class="mode-action active" id="revealMode" aria-pressed="true">👆 Reveal</button><button class="mode-action" id="flagMode" aria-pressed="false">🚩 Flag one tile</button></div></div><div class="sweep-grid mode-reveal" id="sweepGrid"></div><p class="game-status" id="status">Your first tap opens a safe pocket.</p><div id="result"></div>`);
   const grid = $('#sweepGrid');
   let suppressClick = -1;
   let mines = new Set(), openTiles = new Set(), flags = new Set(), flagMode = false, over = false, started = 0, timer;
+  function setInputMode(mode, message = '') { flagMode = mode === 'flag'; grid.classList.toggle('mode-flag', flagMode); grid.classList.toggle('mode-reveal', !flagMode); $('#inputMode').textContent = flagMode ? '🚩 NEXT TAP: FLAG ONE TILE' : '👆 NEXT TAP: REVEAL'; $('#flagMode').classList.toggle('active', flagMode); $('#revealMode').classList.toggle('active', !flagMode); $('#flagMode').setAttribute('aria-pressed', String(flagMode)); $('#revealMode').setAttribute('aria-pressed', String(!flagMode)); if (message) $('#status').textContent = message; }
   function adjacent(cell) { const row = Math.floor(cell / 5), column = cell % 5; return [-1, 0, 1].flatMap((rowStep) => [-1, 0, 1].map((columnStep) => [row + rowStep, column + columnStep])).filter(([nextRow, nextColumn]) => (nextRow !== row || nextColumn !== column) && nextRow >= 0 && nextRow < 5 && nextColumn >= 0 && nextColumn < 5).map(([nextRow, nextColumn]) => nextRow * 5 + nextColumn); }
   grid.innerHTML = Array.from({ length: 25 }, (_, index) => `<button class="sweep-tile" data-tile="${index}" aria-label="Row ${Math.floor(index / 5) + 1}, column ${index % 5 + 1}, hidden"></button>`).join('');
   const tiles = [...grid.querySelectorAll('[data-tile]')];
   tiles.forEach((tile) => {
     const cell = Number(tile.dataset.tile);
     tile.onclick = () => { if (suppressClick === cell) { suppressClick = -1; return; } tap(cell); };
-    tile.oncontextmenu = (event) => { event.preventDefault(); flag(cell); };
+    tile.oncontextmenu = (event) => { event.preventDefault(); if (flag(cell) && flagMode) setInputMode('reveal', 'Flag placed. Back to Reveal.'); };
     let hold, startX, startY;
     const cancelHold = () => { clearTimeout(hold); hold = null; };
-    tile.onpointerdown = (event) => { if (event.pointerType === 'mouse') return; startX = event.clientX; startY = event.clientY; hold = setTimeout(() => { hold = null; suppressClick = cell; flag(cell); setTimeout(() => { if (suppressClick === cell) suppressClick = -1; }, 700); }, 520); };
+    tile.onpointerdown = (event) => { if (event.pointerType === 'mouse') return; startX = event.clientX; startY = event.clientY; hold = setTimeout(() => { hold = null; suppressClick = cell; if (flag(cell) && flagMode) setInputMode('reveal', 'Flag placed. Back to Reveal.'); setTimeout(() => { if (suppressClick === cell) suppressClick = -1; }, 700); }, 520); };
     tile.onpointermove = (event) => { if (Math.hypot(event.clientX - startX, event.clientY - startY) > 10) cancelHold(); };
     tile.onpointerup = cancelHold; tile.onpointercancel = cancelHold; tile.onpointerleave = cancelHold;
   });
@@ -215,18 +217,19 @@ function legacySweep() {
     return revealed.size === 21;
   }
   function plant(first) { const safePocket = new Set([first, ...adjacent(first)]); const options = Array.from({ length: 25 }, (_, index) => index).filter((index) => !safePocket.has(index)); for (let attempt = 0; attempt < 200; attempt += 1) { const candidate = new Set(randomOrder(options).slice(0, 4)); if (isDeducible(first, candidate)) { mines = candidate; return; } } mines = new Set(randomOrder(options).slice(0, 4)); }
-  function flag(cell) { if (over || openTiles.has(cell)) return; if (flags.has(cell)) flags.delete(cell); else if (flags.size < 4) flags.add(cell); else return note('Only four flags available'); vibrate(); draw(); }
+  function flag(cell) { if (over || openTiles.has(cell)) return false; if (flags.has(cell)) flags.delete(cell); else if (flags.size < 4) flags.add(cell); else { note('Only four flags available'); return false; } vibrate(); draw(); return true; }
   function reveal(cell) { if (openTiles.has(cell) || flags.has(cell)) return; openTiles.add(cell); if (!adjacent(cell).some((near) => mines.has(near))) adjacent(cell).forEach((near) => { if (!mines.has(near)) reveal(near); }); }
   function tap(cell) {
-    if (over) return; if (flagMode) return flag(cell); if (flags.has(cell)) return;
+    if (over) return; if (flagMode) { if (flag(cell)) setInputMode('reveal', 'Flag placed. Back to Reveal.'); return; } if (flags.has(cell)) return note('That tile is flagged. Choose Flag one tile to remove it.');
     if (!mines.size) { plant(cell); started = performance.now(); timer = setInterval(() => { $('#time').textContent = `${((performance.now() - started) / 1000).toFixed(1)}s`; }, 100); }
-    if (openTiles.has(cell)) { const near = adjacent(cell), count = near.filter((candidate) => mines.has(candidate)).length; if (count && near.filter((candidate) => flags.has(candidate)).length === count) near.filter((candidate) => !flags.has(candidate)).forEach(tap); return; }
+    if (openTiles.has(cell)) return note('Already revealed. Pick a hidden tile.');
     if (mines.has(cell)) { over = true; clearInterval(timer); $('#status').textContent = 'Boom. The reef bites back.'; draw(); finish('Mine found!', 0, current, { scoreLabel: `${openTiles.size} / 21 safe`, detail: 'Losses do not replace clear-time records' }); $('#again').onclick = restart; return; }
     reveal(cell); vibrate(); beep(430, .05); draw();
     if (openTiles.size === 21) { over = true; clearInterval(timer); const elapsed = Math.round(performance.now() - started); $('#time').textContent = `${(elapsed / 1000).toFixed(1)}s`; $('#status').textContent = 'Reef cleared. Clean work.'; finish('Perfect sweep!', elapsed, current, { lower: true }); $('#again').onclick = restart; }
   }
-  function restart() { clearInterval(timer); mines.clear(); openTiles.clear(); flags.clear(); over = false; started = 0; $('#time').textContent = '0.0s'; $('#result').replaceChildren(); $('#status').textContent = 'Your first tap opens a safe pocket.'; draw(); }
-  $('#flagMode').onclick = () => { flagMode = !flagMode; $('#flagMode').textContent = `🚩 Flag mode: ${flagMode ? 'on' : 'off'}`; $('#flagMode').setAttribute('aria-pressed', String(flagMode)); vibrate(); };
+  function restart() { clearInterval(timer); mines.clear(); openTiles.clear(); flags.clear(); over = false; started = 0; $('#time').textContent = '0.0s'; $('#result').replaceChildren(); setInputMode('reveal', 'Your first tap opens a safe pocket.'); draw(); }
+  $('#revealMode').onclick = () => { setInputMode('reveal', 'Reveal selected. Your next tile tap opens it.'); vibrate(); };
+  $('#flagMode').onclick = () => { if (over) return; setInputMode('flag', 'Flag armed for one tile. After that, Reveal returns automatically.'); vibrate(); };
   draw(); return () => clearInterval(timer);
 }
 function shellShuffle() {
@@ -236,7 +239,7 @@ function shellShuffle() {
   grid.innerHTML = Array.from({ length: 16 }, (_, index) => `<button class="match-card" data-card="${index}" aria-label="Card ${index + 1}, hidden">✦</button>`).join('');
   const cardButtons = [...grid.querySelectorAll('[data-card]')];
   cardButtons.forEach((button) => { button.onclick = () => tap(Number(button.dataset.card)); });
-  function draw() { cardButtons.forEach((button, index) => { const visible = matched.has(index) || selected.includes(index); button.className = `match-card ${visible ? 'flipped' : ''}`; button.setAttribute('aria-label', `Card ${index + 1}${matched.has(index) ? `, matched ${cards[index]}` : selected.includes(index) ? `, ${cards[index]}` : ', hidden'}`); button.textContent = visible ? cards[index] : '✦'; }); }
+  function draw() { cardButtons.forEach((button, index) => { const visible = matched.has(index) || selected.includes(index); button.className = `match-card ${visible ? 'flipped' : ''}`; button.disabled = locked || matched.has(index) || selected.includes(index); button.setAttribute('aria-label', `Card ${index + 1}${matched.has(index) ? `, matched ${cards[index]}` : selected.includes(index) ? `, ${cards[index]}` : ', hidden'}`); button.textContent = visible ? cards[index] : '✦'; }); }
   function reset() { clearInterval(timer); clearTimeout(flipTimer); cards = [...icons, ...icons].sort(() => Math.random() - .5); selected = []; matched = new Set(); moves = 0; streak = 0; started = 0; locked = false; $('#pairs').textContent = '0 / 8'; $('#moves').textContent = '0'; $('#streak').textContent = '0'; $('#time').textContent = '0.0s'; $('#status').textContent = 'Choose your first shell.'; $('#result').replaceChildren(); draw(); }
   function tap(index) {
     if (locked || matched.has(index) || selected.includes(index)) return;
@@ -245,7 +248,7 @@ function shellShuffle() {
     if (selected.length === 2) {
       moves += 1; $('#moves').textContent = moves;
       if (cards[selected[0]] === cards[selected[1]]) { selected.forEach((card) => matched.add(card)); selected = []; streak += 1; $('#streak').textContent = streak; $('#pairs').textContent = `${matched.size / 2} / 8`; $('#status').textContent = streak >= 3 ? `${streak} matches in a row! 🔥` : 'A match! Keep going.'; beep(560 + Math.min(streak, 5) * 70, .09); vibrate(streak >= 3 ? 'medium' : 'light'); if (matched.size === 16) { clearInterval(timer); const elapsed = Math.round(performance.now() - started); const score = moves * 1_000_000 + elapsed; $('#time').textContent = `${(elapsed / 1000).toFixed(1)}s`; $('#status').textContent = 'Ocean catalog complete.'; finish('All 8 pairs found!', score, current, { lower: true, scoreLabel: `${moves} moves · ${(elapsed / 1000).toFixed(1)}s`, detail: `Best streak ${streak}` }); $('#again').onclick = reset; } draw(); }
-      else { locked = true; streak = 0; $('#streak').textContent = '0'; $('#status').textContent = 'Not quite. Watch them turn.'; flipTimer = setTimeout(() => { selected = []; locked = false; draw(); }, 850); }
+      else { locked = true; streak = 0; $('#streak').textContent = '0'; $('#status').textContent = 'Not a match · input locked while the cards are visible.'; draw(); flipTimer = setTimeout(() => { selected = []; locked = false; draw(); $('#status').textContent = 'Choose a new pair.'; }, 850); }
     }
   }
   reset(); return () => { clearInterval(timer); clearTimeout(flipTimer); };
@@ -269,10 +272,11 @@ function reefReflex() {
 function krakenCurrent() {
   const symbols = ['🪸', '🐙', '🐡', '🦀'];
   const cueNames = ['Coral', 'Octopus', 'Puffer', 'Crab'];
-  shell('🐙', 'MEMORY / LAB', 'Remember four signals. NORMAL repeats them in order; REVERSE repeats them backward.', `<div class="scorebar"><span>TRIAL <strong id="level">0 / 10</strong></span><span>CURRENT <strong id="mode">NORMAL</strong></span><span>LIVES <strong id="lives">3</strong></span><span>BEST <strong>${best(current) || 0}</strong></span></div><div class="current-banner" id="currentBanner">NORMAL →</div><div class="sequence-grid">${symbols.map((symbol, index) => `<button class="sequence-pad pad-${index}" data-pad="${index}" aria-label="${cueNames[index]}">${symbol}</button>`).join('')}</div><p id="cue" class="sr-only" role="status" aria-live="assertive" aria-atomic="true"></p><p class="game-status" id="status">Two practice currents come first.</p><div id="result"><button id="start" class="primary-action">Enter the current →</button></div>`);
+  shell('🐙', 'MEMORY / LAB', 'Remember four signals. NORMAL repeats them in order; REVERSE repeats them backward.', `<div class="scorebar"><span>TRIAL <strong id="level">0 / 10</strong></span><span>CURRENT <strong id="mode">NORMAL</strong></span><span>LIVES <strong id="lives">3</strong></span><span>BEST <strong>${best(current) || 0}</strong></span></div><div class="current-banner" id="currentBanner">NORMAL →</div><div class="sequence-grid">${symbols.map((symbol, index) => `<button class="sequence-pad pad-${index}" data-pad="${index}" aria-label="${cueNames[index]}" disabled>${symbol}</button>`).join('')}</div><p id="cue" class="sr-only" role="status" aria-live="assertive" aria-atomic="true"></p><p class="game-status" id="status">Two practice currents come first.</p><div id="result"><button id="start" class="primary-action">Enter the current →</button></div>`);
   const random = seededRandom(`${new Date().toISOString().slice(0, 10)}:${roomId}:kraken`);
   let pattern = [], target = [], index = 0, trial = -2, correct = 0, lives = 3, playing = false, alive = true;
   const timers = new Set();
+  const setPadsEnabled = (enabled) => mount.querySelectorAll('[data-pad]').forEach((pad) => { pad.disabled = !enabled; });
   function later(fn, ms) { const t = setTimeout(() => { timers.delete(t); if (alive) fn(); }, ms); timers.add(t); }
   function flash(padIndex) { const pad = $(`[data-pad="${padIndex}"]`); pad.classList.add('lit'); $('#cue').textContent = cueNames[padIndex]; beep(270 + padIndex * 125, .18); vibrate(); later(() => pad.classList.remove('lit'), 320); }
   function next() {
@@ -285,27 +289,27 @@ function krakenCurrent() {
     }
     pattern = Array.from({ length: 4 }, () => Math.floor(random() * 4));
     const mode = trial < 0 ? (trial === -2 ? 'normal' : 'reverse') : random() < .45 ? 'reverse' : 'normal';
-    target = expectedSequence(pattern, mode); index = 0; playing = true;
+    target = expectedSequence(pattern, mode); index = 0; playing = true; setPadsEnabled(false);
     $('#level').textContent = trial < 0 ? `P${trial + 3} / 2` : `${trial + 1} / 10`;
     $('#mode').textContent = mode.toUpperCase();
     $('#currentBanner').textContent = mode === 'reverse' ? '← REVERSE' : 'NORMAL →';
     $('#currentBanner').classList.toggle('reverse', mode === 'reverse');
     $('#status').textContent = `${trial < 0 ? 'Practice. ' : ''}Watch four signals, then go ${mode}.`;
     pattern.forEach((padIndex, cueIndex) => later(() => flash(padIndex), 650 + cueIndex * 520));
-    later(() => { playing = false; $('#status').textContent = mode === 'reverse' ? 'Your turn—last signal first.' : 'Your turn—same order.'; }, 650 + pattern.length * 520);
+    later(() => { playing = false; setPadsEnabled(true); $('#status').textContent = mode === 'reverse' ? 'YOUR TURN · Reverse it: last signal first.' : 'YOUR TURN · Repeat the same order.'; }, 650 + pattern.length * 520);
   }
   $('#start').onclick = () => { $('#result').replaceChildren(); next(); };
   mount.querySelectorAll('[data-pad]').forEach((pad) => pad.onclick = () => {
     if (playing || !pattern.length) return;
     const guess = Number(pad.dataset.pad); flash(guess);
     if (guess !== target[index]) {
-      playing = true;
+      playing = true; setPadsEnabled(false);
       track('kraken_trial', { mode: $('#mode').textContent.toLowerCase(), practice: trial < 0, correct: false, errorAt: index + 1 });
       if (trial >= 0) { lives -= 1; $('#lives').textContent = lives; }
       $('#status').textContent = `Missed signal ${index + 1}. ${trial < 0 ? 'Practice does not cost a life.' : `${lives} lives left.`}`;
       trial += 1; later(next, 1000);
     } else if (++index === target.length) {
-      playing = true;
+      playing = true; setPadsEnabled(false);
       track('kraken_trial', { mode: $('#mode').textContent.toLowerCase(), practice: trial < 0, correct: true });
       if (trial >= 0) correct += 1;
       $('#status').textContent = trial < 0 ? 'Practice clear.' : 'Current clear.';
@@ -321,13 +325,21 @@ function abyssExpedition() {
     { name: 'Blue Drop', size: 6, mines: 7 },
     { name: 'The Trench', size: 7, mines: 10 },
   ];
-  shell('💣', 'DEDUCTION / EXPEDITION LAB', 'Clear a solver-verified reef. After each depth, bank the run or risk everything by descending.', `<div class="scorebar"><span>DEPTH <strong id="depth">1 / 3</strong></span><span>SAFE <strong id="safe">0</strong></span><span>FLAGS <strong id="flags">0</strong></span><span>ACTIONS <strong id="actions">0</strong></span></div><div class="depth-card"><span id="depthName">Shallows</span><strong id="contract">Clear the reef</strong><small id="sonarState">One sonar available this expedition</small></div><div class="sweep-grid" id="sweepGrid"></div><p class="game-status" id="status">Your first tap opens a safe pocket.</p><div class="game-actions"><button class="secondary-action" id="flagMode" aria-pressed="false">🚩 Flag mode: off</button><button class="secondary-action" id="sonarMode" aria-pressed="false">◉ Use sonar</button></div><div id="result"></div>`);
+  shell('💣', 'DEDUCTION / EXPEDITION LAB', 'Clear a solver-verified reef. After each depth, bank the run or risk everything by descending.', `<div class="scorebar"><span>DEPTH <strong id="depth">1 / 3</strong></span><span>SAFE <strong id="safe">0</strong></span><span>FLAGS <strong id="flags">0</strong></span><span>ACTIONS <strong id="actions">0</strong></span></div><div class="depth-card"><span id="depthName">Shallows</span><strong id="contract">Clear the reef</strong><small id="sonarState">One sonar available this expedition</small></div><div class="input-mode-panel"><strong id="inputMode" aria-live="polite">👆 NEXT TAP: REVEAL</strong><small>Flag and sonar are one-shot · long-press also flags</small><div class="mode-actions three"><button class="mode-action active" id="revealMode" aria-pressed="true">👆 Reveal</button><button class="mode-action" id="flagMode" aria-pressed="false">🚩 Flag one</button><button class="mode-action" id="sonarMode" aria-pressed="false">◉ Sonar one</button></div></div><div class="sweep-grid mode-reveal" id="sweepGrid"></div><p class="game-status" id="status">Your first tap opens a safe pocket.</p><div id="result"></div>`);
   const grid = $('#sweepGrid');
   let depthIndex = 0, cleared = 0, runNumber = 0, sonarAvailable = true, assisted = false;
   let mines = new Set(), openTiles = new Set(), flags = new Set(), sonarMarks = new Map();
   let flagMode = false, sonarMode = false, over = false, actions = 0, generation = null;
   let suppressClick = -1;
   let tiles = [];
+
+  function setInputMode(mode, message = '') {
+    flagMode = mode === 'flag'; sonarMode = mode === 'sonar';
+    grid.classList.toggle('mode-flag', flagMode); grid.classList.toggle('mode-sonar', sonarMode); grid.classList.toggle('mode-reveal', !flagMode && !sonarMode);
+    $('#inputMode').textContent = flagMode ? '🚩 NEXT TAP: FLAG ONE TILE' : sonarMode ? '◉ NEXT TAP: SCAN ONE ZONE' : '👆 NEXT TAP: REVEAL';
+    for (const [id, active] of [['revealMode', !flagMode && !sonarMode], ['flagMode', flagMode], ['sonarMode', sonarMode]]) { $(`#${id}`).classList.toggle('active', active); $(`#${id}`).setAttribute('aria-pressed', String(active)); }
+    if (message) $('#status').textContent = message;
+  }
 
   const config = () => depths[depthIndex];
   const safeTarget = () => config().size * config().size - config().mines;
@@ -342,10 +354,10 @@ function abyssExpedition() {
     tiles.forEach((tile) => {
       const cell = Number(tile.dataset.tile);
       tile.onclick = () => { if (suppressClick === cell) { suppressClick = -1; return; } tap(cell); };
-      tile.oncontextmenu = (event) => { event.preventDefault(); flag(cell); };
+      tile.oncontextmenu = (event) => { event.preventDefault(); if (flag(cell) && flagMode) setInputMode('reveal', 'Flag placed. Back to Reveal.'); };
       let hold, startX, startY;
       const cancelHold = () => { clearTimeout(hold); hold = null; };
-      tile.onpointerdown = (event) => { if (event.pointerType === 'mouse') return; startX = event.clientX; startY = event.clientY; hold = setTimeout(() => { hold = null; suppressClick = cell; flag(cell); setTimeout(() => { if (suppressClick === cell) suppressClick = -1; }, 700); }, 520); };
+      tile.onpointerdown = (event) => { if (event.pointerType === 'mouse') return; startX = event.clientX; startY = event.clientY; hold = setTimeout(() => { hold = null; suppressClick = cell; if (flag(cell) && flagMode) setInputMode('reveal', 'Flag placed. Back to Reveal.'); setTimeout(() => { if (suppressClick === cell) suppressClick = -1; }, 700); }, 520); };
       tile.onpointermove = (event) => { if (Math.hypot(event.clientX - startX, event.clientY - startY) > 10) cancelHold(); };
       tile.onpointerup = cancelHold; tile.onpointercancel = cancelHold; tile.onpointerleave = cancelHold;
     });
@@ -385,21 +397,21 @@ function abyssExpedition() {
   }
 
   function flag(cell) {
-    if (over || openTiles.has(cell)) return;
+    if (over || openTiles.has(cell)) return false;
     if (flags.has(cell)) flags.delete(cell);
     else if (flags.size < config().mines) flags.add(cell);
-    else return note(`Only ${config().mines} flags at this depth`);
-    actions += 1; vibrate(); draw();
+    else { note(`Only ${config().mines} flags at this depth`); return false; }
+    actions += 1; vibrate(); draw(); return true;
   }
 
   function useSonar(cell) {
     if (!sonarAvailable || !mines.size || openTiles.has(cell)) return;
     const scanned = new Set([cell, ...cellNeighbors(cell)]);
     const count = [...scanned].filter((candidate) => mines.has(candidate)).length;
-    sonarAvailable = false; assisted = true; sonarMode = false; sonarMarks.set(cell, count); actions += 1;
+    sonarAvailable = false; assisted = true; sonarMarks.set(cell, count); actions += 1;
     $('#sonarMode').textContent = '◉ Sonar spent'; $('#sonarMode').disabled = true; $('#sonarMode').setAttribute('aria-pressed', 'false');
     $('#sonarState').textContent = `Assisted expedition · ${count} mine${count === 1 ? '' : 's'} in that zone`;
-    $('#status').textContent = `Sonar reports ${count} mine${count === 1 ? '' : 's'} in the highlighted 3×3 zone.`;
+    setInputMode('reveal', `Sonar reports ${count} mine${count === 1 ? '' : 's'} in the highlighted 3×3 zone. Back to Reveal.`);
     track('abyss_sonar', { depth: depthIndex + 1, count });
     vibrate('medium'); beep(620, .14); draw();
   }
@@ -407,23 +419,14 @@ function abyssExpedition() {
   function tap(cell) {
     if (over) return;
     if (sonarMode) return useSonar(cell);
-    if (flagMode) return flag(cell);
-    if (flags.has(cell)) return;
+    if (flagMode) { if (flag(cell)) setInputMode('reveal', 'Flag placed. Back to Reveal.'); return; }
+    if (flags.has(cell)) return note('That tile is flagged. Choose Flag one to remove it.');
     if (!mines.size) {
       try { plant(cell); }
       catch { over = true; $('#status').textContent = 'This reef could not be proven fair. Start a new expedition.'; finish('Generation stopped safely', cleared, current, { scoreLabel: `${cleared} depths banked`, detail: 'No unverified board was served' }); $('#again').onclick = resetExpedition; return; }
     }
     actions += 1;
-    if (openTiles.has(cell)) {
-      const near = cellNeighbors(cell);
-      if (countNear(cell) && near.filter((candidate) => flags.has(candidate)).length === countNear(cell)) {
-        const chordTargets = near.filter((candidate) => !flags.has(candidate));
-        if (chordTargets.some((candidate) => mines.has(candidate))) return detonate();
-        chordTargets.forEach(reveal);
-        draw(); checkClear();
-      }
-      return;
-    }
+    if (openTiles.has(cell)) return note('Already revealed. Pick a hidden tile.');
     if (mines.has(cell)) return detonate(cell);
     reveal(cell); vibrate(); beep(430, .05); draw(); checkClear();
   }
@@ -450,18 +453,19 @@ function abyssExpedition() {
   }
 
   function startDepth() {
-    mines.clear(); openTiles.clear(); flags.clear(); sonarMarks.clear(); generation = null; actions = 0; over = false; flagMode = false; sonarMode = false;
+    mines.clear(); openTiles.clear(); flags.clear(); sonarMarks.clear(); generation = null; actions = 0; over = false;
     $('#depthName').textContent = config().name; $('#contract').textContent = `${config().size}×${config().size} · ${config().mines} mines`;
     $('#status').textContent = 'Your first tap opens a safe pocket.'; $('#result').replaceChildren();
-    $('#flagMode').textContent = '🚩 Flag mode: off'; $('#flagMode').setAttribute('aria-pressed', 'false');
-    $('#sonarMode').disabled = !sonarAvailable; $('#sonarMode').textContent = sonarAvailable ? '◉ Use sonar' : '◉ Sonar spent';
+    setInputMode('reveal');
+    $('#sonarMode').disabled = !sonarAvailable; $('#sonarMode').textContent = sonarAvailable ? '◉ Sonar one' : '◉ Sonar spent';
     $('#sonarState').textContent = sonarAvailable ? 'One sonar available this expedition' : 'Sonar already spent';
     buildGrid(); draw();
   }
 
   function resetExpedition() { runNumber += 1; depthIndex = 0; cleared = 0; sonarAvailable = true; assisted = false; startDepth(); }
-  $('#flagMode').onclick = () => { if (over) return; flagMode = !flagMode; sonarMode = false; $('#flagMode').textContent = `🚩 Flag mode: ${flagMode ? 'on' : 'off'}`; $('#flagMode').setAttribute('aria-pressed', String(flagMode)); $('#sonarMode').setAttribute('aria-pressed', 'false'); vibrate(); };
-  $('#sonarMode').onclick = () => { if (!sonarAvailable || over) return; if (!mines.size) return note('Open the reef before using sonar'); sonarMode = !sonarMode; flagMode = false; $('#sonarMode').setAttribute('aria-pressed', String(sonarMode)); $('#flagMode').setAttribute('aria-pressed', 'false'); $('#status').textContent = sonarMode ? 'Choose the center of a 3×3 sonar zone.' : 'Sonar cancelled.'; };
+  $('#revealMode').onclick = () => { setInputMode('reveal', 'Reveal selected. Your next tile tap opens it.'); vibrate(); };
+  $('#flagMode').onclick = () => { if (over) return; setInputMode('flag', 'Flag armed for one tile. After that, Reveal returns automatically.'); vibrate(); };
+  $('#sonarMode').onclick = () => { if (!sonarAvailable || over) return; if (!mines.size) return note('Reveal one tile before using sonar'); setInputMode('sonar', 'Sonar armed for one 3×3 zone. Tap a hidden center tile.'); vibrate(); };
   startDepth(); return () => {};
 }
 
@@ -481,7 +485,7 @@ function tideTell() {
   const zone = $('#tellZone');
   const random = seededRandom(`${new Date().toISOString().slice(0, 10)}:${roomId}:tide`);
   let wave = 0, cueIndex = 0, score = 0, combo = 0, active = false, resolved = false, deep = false, currentCreature = 0;
-  let cueTimer, holdTimer, pointerDownAt = 0;
+  let cueTimer, holdTimer, deepConfirmTimer, pointerDownAt = 0, deepArmed = false;
 
   function renderRule() {
     $('#ruleBoard').innerHTML = creatures.map((creature, index) => `<div><span>${creature.icon} ${creature.name}</span><strong>${actionLabels[rules[wave][index]]}</strong></div>`).join('');
@@ -489,20 +493,25 @@ function tideTell() {
   }
 
   function chooseCurrent() {
-    active = false; resolved = true; clearTimeout(cueTimer); clearTimeout(holdTimer);
+    active = false; resolved = true; deepArmed = false; clearTimeout(cueTimer); clearTimeout(holdTimer); clearTimeout(deepConfirmTimer);
     if (wave >= rules.length) return complete('All currents read');
     renderRule();
     $('#result').innerHTML = `<div class="decision-card"><span>CHOOSE THE PRESSURE</span><h3>${wave ? 'The rule changed.' : 'How deep are you going?'}</h3><p>Calm water gives feedback and continues after mistakes. Deep Dive scores double, moves faster, and ends on one bad read.</p><div class="decision-actions"><button class="secondary-action" id="calm">Calm water</button><button class="primary-action" id="deep">Deep Dive · 2×</button></div></div>`;
     $('#calm').onclick = () => startWave(false);
-    $('#deep').onclick = () => startWave(true);
+    $('#deep').onclick = () => {
+      if (deepArmed) return startWave(true);
+      deepArmed = true; $('#deep').textContent = 'Confirm Deep Dive · 2×'; $('#status').textContent = 'Deep Dive ends on one mistake. Tap again to confirm.'; vibrate('medium');
+      deepConfirmTimer = setTimeout(() => { deepArmed = false; if ($('#deep')) $('#deep').textContent = 'Deep Dive · 2×'; }, 2600);
+    };
     zone.className = 'tell-zone idle'; $('#tellIcon').textContent = '🌊'; $('#tellName').textContent = 'Choose your pressure'; $('#tellHint').textContent = 'The rule is visible above';
   }
 
   function startWave(isDeep) {
-    deep = isDeep; cueIndex = 0; active = false; resolved = true; $('#cueNumber').textContent = '0 / 6'; $('#result').replaceChildren();
+    deep = isDeep; deepArmed = false; clearTimeout(deepConfirmTimer); cueIndex = 0; active = false; resolved = true; $('#cueNumber').textContent = '0 / 6'; $('#result').replaceChildren();
     track('tide_pressure', { wave: wave + 1, choice: deep ? 'deep' : 'calm' });
     $('#status').textContent = `${deep ? 'Deep Dive: one miss ends the run.' : 'Calm water: misses break the combo.'} Rule locked for this wave.`;
-    nextCue();
+    zone.className = 'tell-zone idle'; $('#tellIcon').textContent = '3'; $('#tellName').textContent = deep ? 'DEEP DIVE' : 'CALM WATER'; $('#tellHint').textContent = 'Rule locked · get ready';
+    cueTimer = setTimeout(nextCue, 850);
   }
 
   function nextCue() {
@@ -558,7 +567,7 @@ function tideTell() {
   zone.onpointercancel = () => clearTimeout(holdTimer);
   $('#start').onclick = chooseCurrent;
   renderRule();
-  return () => { active = false; clearTimeout(cueTimer); clearTimeout(holdTimer); };
+  return () => { active = false; clearTimeout(cueTimer); clearTimeout(holdTimer); clearTimeout(deepConfirmTimer); };
 }
 
 function echoWake() {
@@ -581,10 +590,12 @@ function echoWake() {
       const row = Math.floor(cell / size), column = cell % size;
       const wake = wakeMap.get(cell);
       const isRock = rocks.includes(cell), isPearl = state.pearls.includes(cell), isPlayer = cell === state.position;
-      tile.className = `echo-cell ${isRock ? 'rock' : ''} ${wake ? `wake wake-${wake}` : ''} ${erupted.includes(cell) ? 'erupted' : ''}`;
+      const playerRow = Math.floor(state.position / size), playerColumn = state.position % size;
+      const isNext = !isRock && Math.abs(playerRow - row) + Math.abs(playerColumn - column) === 1;
+      tile.className = `echo-cell ${isRock ? 'rock' : ''} ${isNext ? 'next' : ''} ${wake ? `wake wake-${wake}` : ''} ${erupted.includes(cell) ? 'erupted' : ''}`;
       tile.textContent = isPlayer ? '🦞' : isPearl ? '⚪' : isRock ? '🪨' : wake ? String(wake) : '';
-      tile.disabled = over || isRock;
-      tile.setAttribute('aria-label', `Row ${row + 1}, column ${column + 1}${isPlayer ? ', your lobster' : isPearl ? ', pearl' : isRock ? ', rock' : wake ? `, wake erupts in ${wake}` : ', clear'}`);
+      tile.disabled = over || !isNext;
+      tile.setAttribute('aria-label', `Row ${row + 1}, column ${column + 1}${isPlayer ? ', your lobster' : isPearl ? ', pearl' : isRock ? ', rock' : wake ? `, wake erupts in ${wake}` : ', clear'}${isNext ? ', available move' : ''}`);
     });
     $('#echoScore').textContent = `${score} / 7`; $('#echoMoves').textContent = `${moves} / 28`;
   }
@@ -606,7 +617,7 @@ function echoWake() {
     if (state.hit) return end('Caught by your own wake', `Move ${moves} returned to a tile you armed three turns earlier`);
     if (score >= 7) return end('Wake mastered!', `${moves} moves · every eruption was visible`);
     if (moves >= 28) return end('The tide closed', 'You ran out of moves before the seventh pearl');
-    $('#status').textContent = state.wakes.some((wake) => wake.turns === 1) ? 'A wake erupts after your next move.' : 'Plan around the numbered wakes.';
+    $('#status').textContent = state.wakes.some((wake) => wake.turns === 1) ? 'DANGER: a red wake erupts after your next move.' : 'Glowing adjacent tiles are your legal moves.';
   }
   function reset() {
     run += 1; score = 0; moves = 0; over = false;
@@ -625,6 +636,7 @@ function pearlRicochet() {
   const width = canvas.width, height = canvas.height;
   const gates = [{ x: 170, y: 530 }, { x: 485, y: 410 }, { x: 200, y: 250 }, { x: 500, y: 110 }];
   let pearl, gate, shots, aiming = false, aim, aimAngle = -Math.PI / 4, moving = false, frame, over = true, ticks = 0;
+  function syncControls() { for (const id of ['aimLeft', 'firePearl', 'aimRight']) $(`#${id}`).disabled = moving || over; }
   const point = (event) => { const rect = canvas.getBoundingClientRect(); return { x: (event.clientX - rect.left) * width / rect.width, y: (event.clientY - rect.top) * height / rect.height }; };
   function draw() {
     context.clearRect(0, 0, width, height);
@@ -636,7 +648,7 @@ function pearlRicochet() {
     context.beginPath(); context.arc(pearl.x, pearl.y, 18, 0, Math.PI * 2); context.fillStyle = '#fff8dc'; context.shadowColor = '#ffffff'; context.shadowBlur = 18; context.fill(); context.shadowBlur = 0; context.strokeStyle = '#ffc94d'; context.lineWidth = 4; context.stroke();
   }
   function stop(message) {
-    moving = false; cancelAnimationFrame(frame); pearl.vx = 0; pearl.vy = 0; draw();
+    moving = false; cancelAnimationFrame(frame); pearl.vx = 0; pearl.vy = 0; draw(); syncControls();
     if (gate >= gates.length) { over = true; finish('Course cleared!', gate, current, { scoreLabel: 'All four gates', detail: `${4 - shots} shot${4 - shots === 1 ? '' : 's'} used` }); $('#again').onclick = reset; return; }
     if (!shots) { over = true; finish('Pearl spent', gate, current, { scoreLabel: `${gate} gate${gate === 1 ? '' : 's'} cleared`, detail: `Needed gate ${gate + 1} next` }); $('#again').onclick = reset; return; }
     $('#status').textContent = message || `Gate ${gate + 1} is still open. ${shots} shot${shots === 1 ? '' : 's'} left.`;
@@ -656,15 +668,15 @@ function pearlRicochet() {
     const distance = Math.hypot(dx, dy);
     if (distance < 30) return draw();
     aimAngle = Math.atan2(dy, dx); const speed = Math.min(10, Math.max(4.5, distance / 22)); pearl.vx = dx / distance * speed; pearl.vy = dy / distance * speed;
-    shots -= 1; ticks = 0; moving = true; $('#ricochetShots').textContent = shots; $('#status').textContent = 'Pearl away—read the rebound.'; track('ricochet_shot', { gate: gate + 1, shotsLeft: shots, speed: Number(speed.toFixed(2)) }); animate();
+    shots -= 1; ticks = 0; moving = true; syncControls(); $('#ricochetShots').textContent = shots; $('#status').textContent = `SHOT IN MOTION · aiming locked · gate ${gate + 1} next`; track('ricochet_shot', { gate: gate + 1, shotsLeft: shots, speed: Number(speed.toFixed(2)) }); animate();
   }
   function release(event) { if (!aiming || moving || over) return; aim = point(event); aiming = false; launch(aim.x - pearl.x, aim.y - pearl.y); }
   canvas.onpointerdown = (event) => { if (moving || over) return; const cursor = point(event); if (Math.hypot(cursor.x - pearl.x, cursor.y - pearl.y) > 55) return note('Start your drag on the pearl'); aiming = true; aim = cursor; canvas.setPointerCapture?.(event.pointerId); draw(); };
   canvas.onpointermove = (event) => { if (!aiming) return; aim = point(event); draw(); };
   canvas.onpointerup = release; canvas.onpointercancel = () => { aiming = false; draw(); };
   $('#aimLeft').onclick = () => { if (!moving && !over) { aimAngle -= Math.PI / 18; draw(); } }; $('#aimRight').onclick = () => { if (!moving && !over) { aimAngle += Math.PI / 18; draw(); } }; $('#firePearl').onclick = () => launch(Math.cos(aimAngle) * 150, Math.sin(aimAngle) * 150);
-  function reset() { cancelAnimationFrame(frame); pearl = { x: 85, y: 650, vx: 0, vy: 0 }; gate = 0; shots = 4; aimAngle = Math.atan2(gates[0].y - pearl.y, gates[0].x - pearl.x); over = false; moving = false; aiming = false; aim = null; $('#ricochetScore').textContent = '0 / 4'; $('#ricochetShots').textContent = '4'; $('#result').replaceChildren(); $('#status').textContent = 'Drag from the pearl toward gate 1. Wall banks are encouraged.'; draw(); }
-  pearl = { x: 85, y: 650, vx: 0, vy: 0 }; gate = 0; shots = 4; draw(); $('#start').onclick = reset;
+  function reset() { cancelAnimationFrame(frame); pearl = { x: 85, y: 650, vx: 0, vy: 0 }; gate = 0; shots = 4; aimAngle = Math.atan2(gates[0].y - pearl.y, gates[0].x - pearl.x); over = false; moving = false; aiming = false; aim = null; $('#ricochetScore').textContent = '0 / 4'; $('#ricochetShots').textContent = '4'; $('#result').replaceChildren(); $('#status').textContent = 'AIMING · drag from the pearl, or use Aim + Fire. Gate 1 is gold.'; draw(); syncControls(); }
+  pearl = { x: 85, y: 650, vx: 0, vy: 0 }; gate = 0; shots = 4; draw(); syncControls(); $('#start').onclick = reset;
   return () => { over = true; cancelAnimationFrame(frame); };
 }
 
@@ -674,12 +686,14 @@ function shellShift() {
   shell('🐚', 'DISCRETE BOARD TACTICS / LAB', 'Select a row or column, then shift the whole current. Groups of three or more clear; the visible forecast refills the reef.', `<div class="scorebar"><span>SHELLS <strong id="shiftScore">0</strong></span><span>MOVES <strong id="shiftMoves">12</strong></span><span>CHAIN <strong id="shiftChain">—</strong></span></div><div class="forecast-card">NEXT CURRENT <strong id="forecast"></strong></div><div class="shift-grid" id="shiftGrid" role="grid" aria-label="Shell Shift reef"></div><div class="shift-controls"><button class="secondary-action" id="rowMode" aria-pressed="true">Shift row</button><button class="secondary-action" id="columnMode" aria-pressed="false">Shift column</button><button aria-label="Shift selected line backward" id="shiftBack">← / ↑</button><button aria-label="Shift selected line forward" id="shiftForward">→ / ↓</button></div><p class="game-status" id="status">Choose a line, then move the current.</p><div id="result"><button class="primary-action" id="start">Wake the reef →</button></div>`);
   const grid = $('#shiftGrid');
   grid.innerHTML = Array.from({ length: size * size }, (_, cell) => `<button class="shift-cell" data-cell="${cell}" role="gridcell"></button>`).join('');
-  let board = [], forecast = [], axis = 'row', selected = 2, moves = 12, score = 0, over = true;
+  let board = [], forecast = [], axis = 'row', selected = null, moves = 12, score = 0, over = true;
   const nextIcon = () => Math.floor(random() * icons.length);
   function draw(highlight = []) {
-    const selectedCells = new Set(Array.from({ length: size }, (_, offset) => axis === 'row' ? selected * size + offset : offset * size + selected));
+    const selectedCells = new Set(selected == null ? [] : Array.from({ length: size }, (_, offset) => axis === 'row' ? selected * size + offset : offset * size + selected));
     grid.querySelectorAll('[data-cell]').forEach((tile) => { const cell = Number(tile.dataset.cell); tile.textContent = icons[board[cell]]; tile.className = `shift-cell ${selectedCells.has(cell) ? 'selected' : ''} ${highlight.includes(cell) ? 'clearing' : ''}`; tile.disabled = over; tile.setAttribute('aria-label', `Row ${Math.floor(cell / size) + 1}, column ${cell % size + 1}, ${icons[board[cell]]}${selectedCells.has(cell) ? ', selected line' : ''}`); });
     $('#forecast').textContent = forecast.map((value) => icons[value]).join(' '); $('#shiftScore').textContent = score; $('#shiftMoves').textContent = moves;
+    $('#shiftBack').disabled = over || selected == null; $('#shiftForward').disabled = over || selected == null;
+    $('#shiftBack').textContent = axis === 'row' ? '← Shift row' : '↑ Shift column'; $('#shiftForward').textContent = axis === 'row' ? 'Shift row →' : 'Shift column ↓';
   }
   function settle() {
     let chain = 0, total = 0, clusters;
@@ -697,13 +711,13 @@ function shellShift() {
     else $('#status').textContent = 'No cluster. Use the forecast to set up the next current.';
   }
   function shift(amount) {
-    if (over) return; board = shiftReef(board, size, axis, selected, amount); moves -= 1; settle(); draw(); track('shell_shift', { axis, selected, amount, moves, score });
+    if (over || selected == null) return note(`Choose a ${axis} first`); board = shiftReef(board, size, axis, selected, amount); moves -= 1; settle(); draw(); track('shell_shift', { axis, selected, amount, moves, score });
     if (!moves) { over = true; draw(); finish('Tide exhausted', score, current, { scoreLabel: `${score} shell points`, detail: 'Whole-line planning beats lucky swaps' }); $('#again').onclick = reset; }
   }
-  function setAxis(next) { axis = next; $('#rowMode').setAttribute('aria-pressed', String(axis === 'row')); $('#columnMode').setAttribute('aria-pressed', String(axis === 'column')); draw(); }
-  grid.querySelectorAll('[data-cell]').forEach((tile) => tile.onclick = () => { const cell = Number(tile.dataset.cell); selected = axis === 'row' ? Math.floor(cell / size) : cell % size; draw(); });
+  function setAxis(next) { axis = next; selected = null; $('#rowMode').setAttribute('aria-pressed', String(axis === 'row')); $('#columnMode').setAttribute('aria-pressed', String(axis === 'column')); $('#rowMode').classList.toggle('active', axis === 'row'); $('#columnMode').classList.toggle('active', axis === 'column'); $('#status').textContent = `ROW/COLUMN: ${axis.toUpperCase()} · choose one on the board.`; draw(); }
+  grid.querySelectorAll('[data-cell]').forEach((tile) => tile.onclick = () => { const cell = Number(tile.dataset.cell); selected = axis === 'row' ? Math.floor(cell / size) : cell % size; $('#status').textContent = `${axis === 'row' ? 'Row' : 'Column'} ${selected + 1} selected. Choose a direction below.`; draw(); });
   $('#rowMode').onclick = () => setAxis('row'); $('#columnMode').onclick = () => setAxis('column'); $('#shiftBack').onclick = () => shift(-1); $('#shiftForward').onclick = () => shift(1);
-  function reset() { board = Array.from({ length: size * size }, nextIcon); forecast = Array.from({ length: 10 }, nextIcon); axis = 'row'; selected = 2; moves = 12; score = 0; over = false; $('#result').replaceChildren(); $('#status').textContent = 'Select a row, then shift it. Three touching shells clear.'; setAxis('row'); }
+  function reset() { board = Array.from({ length: size * size }, nextIcon); forecast = Array.from({ length: 10 }, nextIcon); axis = 'row'; selected = null; moves = 12; score = 0; over = false; $('#result').replaceChildren(); setAxis('row'); }
   board = Array.from({ length: size * size }, nextIcon); forecast = Array.from({ length: 10 }, nextIcon); draw(); $('#start').onclick = reset;
   return () => { over = true; };
 }
@@ -763,10 +777,11 @@ function clawFour(){
     $('#players').textContent=`${room.players.length} / 2 players`;
     $('#round').textContent=room.round||1;
     $('#setScore').textContent=room.players.length?room.players.map(item=>item.wins||0).join(' — '):'0 — 0';
-    $('#turn').textContent=['finished','set-finished'].includes(room.status)?'Finished':room.currentPlayer?.name||'Waiting';
+    $('#turn').textContent=['finished','set-finished'].includes(room.status)?'Finished':room.currentPlayer?.id===player?.id?'YOU':room.currentPlayer?.name||'Waiting';
     const lastMove=[...(room.history||[])].reverse().find(event=>event.type==='move')?.text;
     const readyCount=room.rematchReady?.length||0;
-    $('#status').textContent=room.status==='set-finished'?`${room.setWinner?.name} wins the set ${room.players.map(item=>item.wins||0).join('–')}!`:room.status==='finished'?room.winner?.id==='draw'?'Draw. Both players must ready up.':`${room.winner?.name} wins the round. ${readyCount}/2 ready.`:room.status==='lobby'?'Waiting for a second player. Share the room link.':myTurn()?`Your move. Pick a column.${lastMove?` ${lastMove}.`:''}`:`Waiting on ${room.currentPlayer?.name}.${lastMove?` ${lastMove}.`:''}`;
+    const myPiece=room.players.findIndex(item=>item.id===player?.id)===0?'🦞':room.players.findIndex(item=>item.id===player?.id)===1?'🐚':'';
+    $('#status').textContent=room.status==='set-finished'?`${room.setWinner?.name} wins the set ${room.players.map(item=>item.wins||0).join('–')}!`:room.status==='finished'?room.winner?.id==='draw'?'Draw. Both players must ready up.':`${room.winner?.name} wins the round. ${readyCount}/2 ready.`:room.status==='lobby'?'Waiting for a second player. Share the room link.':myTurn()?`YOUR MOVE ${myPiece} · tap a numbered column once.${lastMove?` ${lastMove}.`:''}`:`WAIT · ${room.currentPlayer?.name} is choosing.${lastMove?` ${lastMove}.`:''}`;
     $('#joinPanel').classList.toggle('hidden',!!player);
     const winning=new Set((room.winningCells||[]).map(([row,column])=>row*7+column));
     room.board.flat().forEach((mark,i)=>{cells[i].className=`claw-cell ${mark==='R'?'red':mark==='Y'?'gold':''} ${winning.has(i)?'winner':''}`;cells[i].textContent=mark==='R'?'🦞':mark==='Y'?'🐚':'·';cells[i].setAttribute('aria-label',`Row ${Math.floor(i/7)+1}, column ${i%7+1}, ${mark==='R'?'lobster':mark==='Y'?'shell':'empty'}${winning.has(i)?', winning line':''}`);});
