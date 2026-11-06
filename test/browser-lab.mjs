@@ -5,8 +5,8 @@ const cdpOrigin = process.env.CDP_ORIGIN || 'http://127.0.0.1:9223';
 const appOrigin = process.env.APP_ORIGIN || 'http://127.0.0.1:8788';
 const room = 'design-lab';
 const pages = await (await fetch(`${cdpOrigin}/json/list`)).json();
-const page = pages.find((candidate) => candidate.type === 'page' && candidate.url.includes('8788'));
-assert.ok(page, 'open the local Clawcade page in a CDP-enabled browser first');
+const page = pages.find((candidate) => candidate.type === 'page' && (candidate.url.includes('8788') || candidate.url.includes('games.jpop.cloud')));
+assert.ok(page, 'open Clawcade in a CDP-enabled browser first');
 
 const socket = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((resolve) => { socket.onopen = resolve; });
@@ -40,7 +40,11 @@ async function evaluate(expression) {
 }
 async function navigate(game) {
   await send('Page.navigate', { url: `${appOrigin}/?room=${room}&game=${game}` });
-  await sleep(250);
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    if (await evaluate(`Boolean(document.querySelector('#gameMount > *'))`)) break;
+    await sleep(50);
+  }
+  assert.equal(await evaluate(`Boolean(document.querySelector('#gameMount > *'))`), true, `${game} did not render`);
   assert.equal(await evaluate('document.documentElement.scrollWidth'), 390, `${game} must not overflow`);
 }
 async function click(selector) {
@@ -79,7 +83,7 @@ await navigate('abyss-expedition');
 for (const [depth, size, mineCount, first] of [[0, 5, 4, 12], [1, 6, 7, 14]]) {
   const seed = `${new Date().toISOString().slice(0, 10)}:${room}:0:${depth}:${first}`;
   const { mines } = generateDeducibleBoard({ size, mineCount, first, seed });
-  await evaluate(`document.querySelector('[data-tile="${first}"]').click()`);
+  await click(`[data-tile="${first}"]`);
   for (let cell = 0; cell < size * size; cell += 1) {
     if (!mines.has(cell) && cell !== first) await evaluate(`document.querySelector('[data-tile="${cell}"]')?.click()`);
   }
