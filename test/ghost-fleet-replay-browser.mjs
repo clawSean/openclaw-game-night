@@ -79,7 +79,7 @@ assert.equal(await first.evaluate(`document.querySelector('#ghostProgram').class
 const staleRoom = `${room}-stale`;
 const stale = await createPage(`${appOrigin}/?room=${staleRoom}&game=ghost-fleet`);
 await stale.evaluate(`localStorage.setItem(${JSON.stringify(`ghost-fleet:${staleRoom}:player`)},JSON.stringify({id:'gone',token:'expired',name:'Old Captain',role:'red'}));location.reload()`);
-await stale.waitFor(`Boolean(document.querySelector('#ghostJoinButton')) && !document.querySelector('#ghostJoin').classList.contains('hidden')`, 'stale token recovery');
+await stale.waitFor(`document.readyState==='complete' && localStorage.getItem(${JSON.stringify(`ghost-fleet:${staleRoom}:player`)})===null && Boolean(document.querySelector('#ghostJoinButton')) && !document.querySelector('#ghostJoin').classList.contains('hidden')`, 'stale token recovery');
 assert.equal(await stale.evaluate(`localStorage.getItem(${JSON.stringify(`ghost-fleet:${staleRoom}:player`)})`), null);
 assert.match(await stale.evaluate(`document.querySelector('#toast').textContent`), /expired/i);
 
