@@ -68,7 +68,11 @@ promotion. Presentation is allowed to amplify fun, but not impersonate it.
 
 | Cabinet | Primary verb | Fantasy | Skill / social texture | Status |
 |---|---|---|---|---|
-| Claw Four | Drop | Outsmart a rival | Live tactical duel | Lab |
+| Claw Four | Drop | Outsmart a rival | Live tactical duel | Original / upgraded |
+| Kraken Sequence | Echo | Survive an escalating dive | Classic memory | Original preserved |
+| Abyss Sweep | Scan | Clear a compact reef | Classic deduction | Original preserved |
+| Shell Shuffle | Match | Catalog sea creatures | Recall + efficiency | Original preserved |
+| Reef Reflex | Strike | Beat your own reaction time | Dexterity | Original preserved |
 | Abyss Expedition | Scan | Survive a dangerous dive | Deduction + commitment | Lab |
 | Kraken Current | Echo | Decode a creature's signal | Memory transformation | Lab |
 | Tide Tell | Obey | Keep composure under deception | Inhibition + risk | Lab |
@@ -163,4 +167,3 @@ confusion or politeness; a later voluntary return is stronger evidence.
   and reconnect behavior are part of game quality.
 - Borrow abstract gameplay lineages, never protected names, assets, text,
   characters, board presentation, audiovisual cadence, or level content.
-

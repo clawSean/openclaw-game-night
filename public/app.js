@@ -35,21 +35,29 @@ function track(event, data = {}) {
   localStorage.setItem(labKey, JSON.stringify(events.slice(-250)));
 }
 const games = [
-  { id: 'claw-four', icon: '🦞', name: 'Claw Four', tag: 'PLAY TOGETHER', desc: 'A best-of-three duel with another human.', color: 'coral' },
-  { id: 'abyss-sweep', icon: '💣', name: 'Abyss Expedition', tag: 'DEDUCTION', desc: 'Clear the reef, then decide whether to risk the dive.', color: 'gold' },
-  { id: 'kraken-sequence', icon: '🐙', name: 'Kraken Current', tag: 'MEMORY', desc: 'Hold four signals. Some currents run backward.', color: 'violet' },
+  { id: 'claw-four', icon: '🦞', name: 'Claw Four', tag: 'PLAY TOGETHER', desc: 'Drop, block, and steal the win. Two claws enter.', color: 'coral' },
+  { id: 'kraken-sequence', icon: '🐙', name: 'Kraken Sequence', tag: 'MEMORY', desc: 'Watch the deep-sea signals. Repeat them or sink.', color: 'violet' },
+  { id: 'abyss-sweep', icon: '💣', name: 'Abyss Sweep', tag: 'LOGIC', desc: 'Find the safe route through a mine-filled reef.', color: 'gold' },
+  { id: 'shell-shuffle', icon: '🐚', name: 'Shell Shuffle', tag: 'MATCHING', desc: 'Flip sea creatures. Match pairs against the clock.', color: 'sea' },
+  { id: 'reef-reflex', icon: '⚡', name: 'Reef Reflex', tag: 'SPEED', desc: 'Wait for the flash. Tap faster than a snapping claw.', color: 'blue' },
+  { id: 'abyss-expedition', icon: '🧿', name: 'Abyss Expedition', tag: 'DEDUCTION', desc: 'Clear the reef, then decide whether to risk the dive.', color: 'gold' },
+  { id: 'kraken-current', icon: '🌊', name: 'Kraken Current', tag: 'MEMORY TWIST', desc: 'Hold four signals. Some currents run backward.', color: 'violet' },
   { id: 'tide-tell', icon: '🪼', name: 'Tide Tell', tag: 'READ & REACT', desc: 'Read the rule, resist the feint, and choose when to dive.', color: 'sea' },
   { id: 'echo-wake', icon: '👻', name: 'Echo Wake', tag: 'OUTRUN YOUR PAST', desc: 'Collect pearls while your last moves erupt behind you.', color: 'blue' },
   { id: 'pearl-ricochet', icon: '⚪', name: 'Pearl Ricochet', tag: 'TRICK SHOTS', desc: 'Bank one pearl through a living coral course.', color: 'gold' },
   { id: 'shell-shift', icon: '🐚', name: 'Shell Shift', tag: 'BOARD TACTICS', desc: 'Move whole reef lines and engineer chain reactions.', color: 'coral' },
   { id: 'clawcade-panic', icon: '🚨', name: 'Clawcade Panic', tag: 'MICROGAME GAUNTLET', desc: 'Six ridiculous emergencies. Read fast. Act faster.', color: 'violet' },
 ];
-const metricVersion = { 'abyss-sweep': 3, 'kraken-sequence': 2, 'tide-tell': 1, 'echo-wake': 1, 'pearl-ricochet': 1, 'shell-shift': 1, 'clawcade-panic': 1 };
+const metricVersion = { 'abyss-sweep': 2, 'shell-shuffle': 2, 'abyss-expedition': 1, 'kraken-current': 1, 'tide-tell': 1, 'echo-wake': 1, 'pearl-ricochet': 1, 'shell-shift': 1, 'clawcade-panic': 1 };
 const key = (id) => `clawcade:best:${id}${metricVersion[id] ? `:v${metricVersion[id]}` : ''}`;
 const best = (id) => Number(localStorage.getItem(key(id)) || 0);
 function formatScore(id, value) {
-  if (id === 'kraken-sequence') return `${value} currents`;
-  if (id === 'abyss-sweep') return `depth ${value}`;
+  if (id === 'kraken-sequence') return `level ${value}`;
+  if (id === 'abyss-sweep') return `${(value / 1000).toFixed(1)}s`;
+  if (id === 'shell-shuffle') return `${Math.floor(value / 1_000_000)} moves`;
+  if (id === 'reef-reflex') return `${value} ms`;
+  if (id === 'kraken-current') return `${value} currents`;
+  if (id === 'abyss-expedition') return `depth ${value}`;
   if (id === 'tide-tell') return `${value} reads`;
   if (id === 'echo-wake') return `${value} pearls`;
   if (id === 'pearl-ricochet') return `${value} gates`;
@@ -103,8 +111,12 @@ function open(id, { write = 'replace' } = {}) {
   if (write === 'replace') history.replaceState({ clawcadeGame: id }, '', url);
   if (id) tg?.BackButton?.show?.(); else tg?.BackButton?.hide?.();
   mount.replaceChildren();
-  if (id === 'kraken-sequence') cleanup = sequence();
-  if (id === 'abyss-sweep') cleanup = sweep();
+  if (id === 'kraken-sequence') cleanup = legacySequence();
+  if (id === 'abyss-sweep') cleanup = legacySweep();
+  if (id === 'shell-shuffle') cleanup = shellShuffle();
+  if (id === 'reef-reflex') cleanup = reefReflex();
+  if (id === 'kraken-current') cleanup = krakenCurrent();
+  if (id === 'abyss-expedition') cleanup = abyssExpedition();
   if (id === 'tide-tell') cleanup = tideTell();
   if (id === 'echo-wake') cleanup = echoWake();
   if (id === 'pearl-ricochet') cleanup = pearlRicochet();
@@ -139,7 +151,122 @@ function finish(message, score, id, { lower = false, scoreLabel = formatScore(id
   $('#result').innerHTML = `<div class="result-card" tabindex="-1"><span>${isBest ? '🏆 NEW PERSONAL BEST' : 'ROUND OVER'}</span><h3>${message}</h3><p>${scoreLabel}${bestText ? ` · Best ${bestText}` : ''}${detail ? `<br>${detail}` : ''}</p><button class="primary-action" id="again">Play again ↻</button></div>`;
   $('.result-card')?.focus({ preventScroll: true });
 }
-function sequence() {
+function legacySequence() {
+  const symbols = ['🪸', '🐙', '🐡', '🦀'];
+  const cueNames = ['Coral', 'Octopus', 'Puffer', 'Crab'];
+  shell('🐙', 'MEMORY / SOLO', 'Watch the lights. Repeat the entire pattern. One wrong tap ends the dive.', `<div class="scorebar"><span>LEVEL <strong id="level">0</strong></span><span>BEST <strong>${best(current)}</strong></span></div><div class="sequence-grid">${symbols.map((symbol, index) => `<button class="sequence-pad pad-${index}" data-pad="${index}" aria-label="${cueNames[index]}">${symbol}</button>`).join('')}</div><p id="cue" class="sr-only" role="status" aria-live="assertive" aria-atomic="true"></p><p class="game-status" id="status">Ready to dive?</p><button id="tempoMode" class="secondary-action" aria-pressed="false">⚡ Rising tide tempo</button><div id="result"><button id="start" class="primary-action">Start sequence →</button></div>`);
+  let pattern = [], index = 0, playing = false, alive = true, relaxed = false;
+  const timers = new Set();
+  function later(fn, ms) { const timer = setTimeout(() => { timers.delete(timer); if (alive) fn(); }, ms); timers.add(timer); }
+  function flash(padIndex) { const pad = $(`[data-pad="${padIndex}"]`); pad.classList.add('lit'); $('#cue').textContent = cueNames[padIndex]; beep(270 + padIndex * 125, .22); vibrate(); later(() => pad.classList.remove('lit'), relaxed ? 520 : 360); }
+  function next() {
+    pattern.push(Math.floor(Math.random() * 4)); index = 0; playing = true;
+    $('#level').textContent = pattern.length;
+    const interval = relaxed ? 1050 : pattern.length >= 13 ? 380 : pattern.length >= 9 ? 450 : pattern.length >= 5 ? 550 : 650;
+    $('#status').textContent = pattern.length > 1 ? `Level ${pattern.length}. Watch carefully…` : 'Watch carefully…';
+    pattern.forEach((padIndex, cueIndex) => later(() => flash(padIndex), 700 + cueIndex * interval));
+    later(() => { playing = false; $('#status').textContent = 'Your turn. Repeat the pattern!'; }, 700 + pattern.length * interval);
+  }
+  $('#tempoMode').onclick = () => { if (pattern.length) return note('Tempo locks during a dive'); relaxed = !relaxed; $('#tempoMode').textContent = relaxed ? '🌙 Relaxed tempo' : '⚡ Rising tide tempo'; $('#tempoMode').setAttribute('aria-pressed', String(relaxed)); vibrate(); };
+  $('#start').onclick = () => { $('#result').replaceChildren(); next(); };
+  mount.querySelectorAll('[data-pad]').forEach((pad) => { pad.onclick = () => {
+    if (playing || !pattern.length) return;
+    const guess = Number(pad.dataset.pad); flash(guess);
+    if (guess !== pattern[index]) {
+      playing = true; $('#status').textContent = 'The Kraken caught you.';
+      finish(`You reached level ${pattern.length - 1}`, pattern.length - 1, current);
+      $('#again').onclick = () => { timers.forEach(clearTimeout); timers.clear(); pattern = []; playing = false; $('#result').replaceChildren(); next(); };
+    } else if (++index === pattern.length) { playing = true; $('#status').textContent = `Level ${pattern.length} clear. Going deeper…`; later(next, 900); }
+  }; });
+  return () => { alive = false; timers.forEach(clearTimeout); };
+}
+function legacySweep() {
+  shell('💣', 'LOGIC / SOLO', 'Reveal safe tiles. Numbers show adjacent mines. Flag suspects; clear every safe tile to win.', `<div class="scorebar"><span>SAFE <strong id="safe">0 / 21</strong></span><span>FLAGS <strong id="flags">0 / 4</strong></span><span>TIME <strong id="time">0.0s</strong></span></div><div class="sweep-grid" id="sweepGrid"></div><p class="game-status" id="status">Your first tap opens a safe pocket.</p><button class="secondary-action" id="flagMode" aria-pressed="false">🚩 Flag mode: off</button><div id="result"></div>`);
+  const grid = $('#sweepGrid');
+  let suppressClick = -1;
+  let mines = new Set(), openTiles = new Set(), flags = new Set(), flagMode = false, over = false, started = 0, timer;
+  function adjacent(cell) { const row = Math.floor(cell / 5), column = cell % 5; return [-1, 0, 1].flatMap((rowStep) => [-1, 0, 1].map((columnStep) => [row + rowStep, column + columnStep])).filter(([nextRow, nextColumn]) => (nextRow !== row || nextColumn !== column) && nextRow >= 0 && nextRow < 5 && nextColumn >= 0 && nextColumn < 5).map(([nextRow, nextColumn]) => nextRow * 5 + nextColumn); }
+  grid.innerHTML = Array.from({ length: 25 }, (_, index) => `<button class="sweep-tile" data-tile="${index}" aria-label="Row ${Math.floor(index / 5) + 1}, column ${index % 5 + 1}, hidden"></button>`).join('');
+  const tiles = [...grid.querySelectorAll('[data-tile]')];
+  tiles.forEach((tile) => {
+    const cell = Number(tile.dataset.tile);
+    tile.onclick = () => { if (suppressClick === cell) { suppressClick = -1; return; } tap(cell); };
+    tile.oncontextmenu = (event) => { event.preventDefault(); flag(cell); };
+    let hold, startX, startY;
+    const cancelHold = () => { clearTimeout(hold); hold = null; };
+    tile.onpointerdown = (event) => { if (event.pointerType === 'mouse') return; startX = event.clientX; startY = event.clientY; hold = setTimeout(() => { hold = null; suppressClick = cell; flag(cell); setTimeout(() => { if (suppressClick === cell) suppressClick = -1; }, 700); }, 520); };
+    tile.onpointermove = (event) => { if (Math.hypot(event.clientX - startX, event.clientY - startY) > 10) cancelHold(); };
+    tile.onpointerup = cancelHold; tile.onpointercancel = cancelHold; tile.onpointerleave = cancelHold;
+  });
+  function draw() {
+    tiles.forEach((tile, index) => {
+      const count = adjacent(index).filter((cell) => mines.has(cell)).length;
+      tile.className = `sweep-tile ${openTiles.has(index) ? 'revealed' : ''} ${mines.has(index) && over ? 'mine' : ''}`;
+      tile.setAttribute('aria-label', `Row ${Math.floor(index / 5) + 1}, column ${index % 5 + 1}${flags.has(index) ? ', flagged' : openTiles.has(index) ? `, ${count} adjacent mines` : ', hidden'}`);
+      tile.textContent = flags.has(index) ? '🚩' : openTiles.has(index) || (over && mines.has(index)) ? mines.has(index) ? '💣' : count || '·' : '';
+    });
+    $('#safe').textContent = `${openTiles.size} / 21`; $('#flags').textContent = `${flags.size} / 4`;
+  }
+  function randomOrder(values) { const copy = [...values]; for (let index = copy.length - 1; index > 0; index -= 1) { const other = Math.floor(Math.random() * (index + 1)); [copy[index], copy[other]] = [copy[other], copy[index]]; } return copy; }
+  function flood(start, field, revealed) { const queue = [start]; while (queue.length) { const cell = queue.pop(); if (revealed.has(cell) || field.has(cell)) continue; revealed.add(cell); if (!adjacent(cell).some((near) => field.has(near))) queue.push(...adjacent(cell)); } }
+  function isDeducible(first, field) {
+    const revealed = new Set(), knownMines = new Set(); flood(first, field, revealed); let changed = true;
+    while (changed) { changed = false; for (const cell of [...revealed]) { const near = adjacent(cell), number = near.filter((candidate) => field.has(candidate)).length; const unknown = near.filter((candidate) => !revealed.has(candidate) && !knownMines.has(candidate)); const marked = near.filter((candidate) => knownMines.has(candidate)).length; if (unknown.length && number === marked) { const before = revealed.size; unknown.forEach((candidate) => flood(candidate, field, revealed)); changed ||= revealed.size > before; } else if (unknown.length && number - marked === unknown.length) { unknown.forEach((candidate) => knownMines.add(candidate)); changed = true; } } }
+    return revealed.size === 21;
+  }
+  function plant(first) { const safePocket = new Set([first, ...adjacent(first)]); const options = Array.from({ length: 25 }, (_, index) => index).filter((index) => !safePocket.has(index)); for (let attempt = 0; attempt < 200; attempt += 1) { const candidate = new Set(randomOrder(options).slice(0, 4)); if (isDeducible(first, candidate)) { mines = candidate; return; } } mines = new Set(randomOrder(options).slice(0, 4)); }
+  function flag(cell) { if (over || openTiles.has(cell)) return; if (flags.has(cell)) flags.delete(cell); else if (flags.size < 4) flags.add(cell); else return note('Only four flags available'); vibrate(); draw(); }
+  function reveal(cell) { if (openTiles.has(cell) || flags.has(cell)) return; openTiles.add(cell); if (!adjacent(cell).some((near) => mines.has(near))) adjacent(cell).forEach((near) => { if (!mines.has(near)) reveal(near); }); }
+  function tap(cell) {
+    if (over) return; if (flagMode) return flag(cell); if (flags.has(cell)) return;
+    if (!mines.size) { plant(cell); started = performance.now(); timer = setInterval(() => { $('#time').textContent = `${((performance.now() - started) / 1000).toFixed(1)}s`; }, 100); }
+    if (openTiles.has(cell)) { const near = adjacent(cell), count = near.filter((candidate) => mines.has(candidate)).length; if (count && near.filter((candidate) => flags.has(candidate)).length === count) near.filter((candidate) => !flags.has(candidate)).forEach(tap); return; }
+    if (mines.has(cell)) { over = true; clearInterval(timer); $('#status').textContent = 'Boom. The reef bites back.'; draw(); finish('Mine found!', 0, current, { scoreLabel: `${openTiles.size} / 21 safe`, detail: 'Losses do not replace clear-time records' }); $('#again').onclick = restart; return; }
+    reveal(cell); vibrate(); beep(430, .05); draw();
+    if (openTiles.size === 21) { over = true; clearInterval(timer); const elapsed = Math.round(performance.now() - started); $('#time').textContent = `${(elapsed / 1000).toFixed(1)}s`; $('#status').textContent = 'Reef cleared. Clean work.'; finish('Perfect sweep!', elapsed, current, { lower: true }); $('#again').onclick = restart; }
+  }
+  function restart() { clearInterval(timer); mines.clear(); openTiles.clear(); flags.clear(); over = false; started = 0; $('#time').textContent = '0.0s'; $('#result').replaceChildren(); $('#status').textContent = 'Your first tap opens a safe pocket.'; draw(); }
+  $('#flagMode').onclick = () => { flagMode = !flagMode; $('#flagMode').textContent = `🚩 Flag mode: ${flagMode ? 'on' : 'off'}`; $('#flagMode').setAttribute('aria-pressed', String(flagMode)); vibrate(); };
+  draw(); return () => clearInterval(timer);
+}
+function shellShuffle() {
+  const icons = ['🐙', '🦀', '🐡', '🦈', '🐚', '🪼', '🦭', '🦞'];
+  shell('🐚', 'MATCHING / SOLO', 'Flip two cards at a time. Match every creature with the fewest moves.', `<div class="scorebar"><span>PAIRS <strong id="pairs">0 / 8</strong></span><span>MOVES <strong id="moves">0</strong></span><span>STREAK <strong id="streak">0</strong></span><span>TIME <strong id="time">0.0s</strong></span></div><div class="match-grid" id="matchGrid"></div><p class="game-status" id="status">Choose your first shell.</p><div id="result"></div>`);
+  const grid = $('#matchGrid'); let cards, selected, matched, moves, started, locked, timer, flipTimer, streak;
+  grid.innerHTML = Array.from({ length: 16 }, (_, index) => `<button class="match-card" data-card="${index}" aria-label="Card ${index + 1}, hidden">✦</button>`).join('');
+  const cardButtons = [...grid.querySelectorAll('[data-card]')];
+  cardButtons.forEach((button) => { button.onclick = () => tap(Number(button.dataset.card)); });
+  function draw() { cardButtons.forEach((button, index) => { const visible = matched.has(index) || selected.includes(index); button.className = `match-card ${visible ? 'flipped' : ''}`; button.setAttribute('aria-label', `Card ${index + 1}${matched.has(index) ? `, matched ${cards[index]}` : selected.includes(index) ? `, ${cards[index]}` : ', hidden'}`); button.textContent = visible ? cards[index] : '✦'; }); }
+  function reset() { clearInterval(timer); clearTimeout(flipTimer); cards = [...icons, ...icons].sort(() => Math.random() - .5); selected = []; matched = new Set(); moves = 0; streak = 0; started = 0; locked = false; $('#pairs').textContent = '0 / 8'; $('#moves').textContent = '0'; $('#streak').textContent = '0'; $('#time').textContent = '0.0s'; $('#status').textContent = 'Choose your first shell.'; $('#result').replaceChildren(); draw(); }
+  function tap(index) {
+    if (locked || matched.has(index) || selected.includes(index)) return;
+    if (!started) { started = performance.now(); timer = setInterval(() => { $('#time').textContent = `${((performance.now() - started) / 1000).toFixed(1)}s`; }, 100); }
+    selected.push(index); vibrate(); beep(440 + selected.length * 80, .06); draw();
+    if (selected.length === 2) {
+      moves += 1; $('#moves').textContent = moves;
+      if (cards[selected[0]] === cards[selected[1]]) { selected.forEach((card) => matched.add(card)); selected = []; streak += 1; $('#streak').textContent = streak; $('#pairs').textContent = `${matched.size / 2} / 8`; $('#status').textContent = streak >= 3 ? `${streak} matches in a row! 🔥` : 'A match! Keep going.'; beep(560 + Math.min(streak, 5) * 70, .09); vibrate(streak >= 3 ? 'medium' : 'light'); if (matched.size === 16) { clearInterval(timer); const elapsed = Math.round(performance.now() - started); const score = moves * 1_000_000 + elapsed; $('#time').textContent = `${(elapsed / 1000).toFixed(1)}s`; $('#status').textContent = 'Ocean catalog complete.'; finish('All 8 pairs found!', score, current, { lower: true, scoreLabel: `${moves} moves · ${(elapsed / 1000).toFixed(1)}s`, detail: `Best streak ${streak}` }); $('#again').onclick = reset; } draw(); }
+      else { locked = true; streak = 0; $('#streak').textContent = '0'; $('#status').textContent = 'Not quite. Watch them turn.'; flipTimer = setTimeout(() => { selected = []; locked = false; draw(); }, 850); }
+    }
+  }
+  reset(); return () => { clearInterval(timer); clearTimeout(flipTimer); };
+}
+function reefReflex() {
+  shell('⚡', 'SPEED / SOLO', 'Wait for GO, then tap. Five clean rounds. Early taps add a 150 ms penalty.', `<div class="scorebar"><span>ROUND <strong id="round">0 / 5</strong></span><span>AVERAGE <strong id="average">—</strong></span><span>FALSE STARTS <strong id="falseStarts">0</strong></span><span>BEST <strong>${best(current) || '—'} ms</strong></span></div><button id="reaction" class="reaction-zone idle" aria-label="Start reflex game"><span id="reactionIcon">⚡</span><strong id="reactionText">Tap to start</strong><small id="reactionHint">Five rounds. No cheating.</small></button><p class="game-status" id="status">When the reef flashes green, strike.</p><div id="result"></div>`);
+  const zone = $('#reaction'); let state = 'idle', samples = [], falseStarts = 0, armedAt = 0, waitTimer;
+  function set(nextState, icon, label, hint) { state = nextState; zone.className = `reaction-zone ${nextState}`; zone.setAttribute('aria-label', `${label}. ${hint}`); $('#reactionIcon').textContent = icon; $('#reactionText').textContent = label; $('#reactionHint').textContent = hint; }
+  function arm() { set('waiting', '◌', 'Wait for it…', 'Do not tap yet'); waitTimer = setTimeout(() => { armedAt = performance.now(); set('go', '🦞', 'GO!', 'TAP NOW'); beep(880, .12); vibrate('heavy'); }, 1100 + Math.random() * 2300); }
+  function next() { if (samples.length === 5) { const raw = Math.round(samples.reduce((sum, value) => sum + value, 0) / 5), adjusted = raw + falseStarts * 150, fastest = Math.min(...samples); set('done', '🏁', `${adjusted} ms score`, 'Five clean strikes'); finish('Reef conquered!', adjusted, current, { lower: true, detail: `${raw} ms raw · ${fastest} ms fastest · ${falseStarts} false start${falseStarts === 1 ? '' : 's'}` }); $('#again').onclick = reset; return; } $('#round').textContent = `${samples.length + 1} / 5`; arm(); }
+  function reset() { clearTimeout(waitTimer); samples = []; falseStarts = 0; $('#round').textContent = '0 / 5'; $('#average').textContent = '—'; $('#falseStarts').textContent = '0'; $('#result').replaceChildren(); set('idle', '⚡', 'Tap to start', 'Five rounds. No cheating.'); }
+  zone.onclick = () => {
+    if (state === 'idle') return next();
+    if (state === 'waiting') { clearTimeout(waitTimer); falseStarts += 1; $('#falseStarts').textContent = falseStarts; vibrate('heavy'); beep(160, .2); set('early', '😬', 'Too soon!', 'Tap to retry this round'); $('#status').textContent = `False start ${falseStarts}. +150 ms penalty.`; return; }
+    if (state === 'early') return arm();
+    if (state === 'go') { const milliseconds = Math.round(performance.now() - armedAt), prior = samples.length ? Math.round(samples.reduce((sum, value) => sum + value, 0) / samples.length) : 0; samples.push(milliseconds); $('#average').textContent = `${Math.round(samples.reduce((sum, value) => sum + value, 0) / samples.length)} ms`; const split = prior ? ` · ${Math.abs(milliseconds - prior)} ms ${milliseconds < prior ? 'faster' : 'slower'} than your run` : ' · First split'; $('#status').textContent = `${milliseconds} ms${split}`; vibrate(); set('between', '✓', `${milliseconds} ms`, 'Tap for next round'); return; }
+    if (state === 'between') next();
+  };
+  return () => clearTimeout(waitTimer);
+}
+function krakenCurrent() {
   const symbols = ['🪸', '🐙', '🐡', '🦀'];
   const cueNames = ['Coral', 'Octopus', 'Puffer', 'Crab'];
   shell('🐙', 'MEMORY / LAB', 'Remember four signals. NORMAL repeats them in order; REVERSE repeats them backward.', `<div class="scorebar"><span>TRIAL <strong id="level">0 / 10</strong></span><span>CURRENT <strong id="mode">NORMAL</strong></span><span>LIVES <strong id="lives">3</strong></span><span>BEST <strong>${best(current) || 0}</strong></span></div><div class="current-banner" id="currentBanner">NORMAL →</div><div class="sequence-grid">${symbols.map((symbol, index) => `<button class="sequence-pad pad-${index}" data-pad="${index}" aria-label="${cueNames[index]}">${symbol}</button>`).join('')}</div><p id="cue" class="sr-only" role="status" aria-live="assertive" aria-atomic="true"></p><p class="game-status" id="status">Two practice currents come first.</p><div id="result"><button id="start" class="primary-action">Enter the current →</button></div>`);
@@ -188,7 +315,7 @@ function sequence() {
   function reset() { timers.forEach(clearTimeout); timers.clear(); pattern=[]; target=[]; index=0; trial=-2; correct=0; lives=3; playing=false; $('#lives').textContent='3'; $('#result').replaceChildren(); next(); }
   return () => { alive = false; timers.forEach(clearTimeout); };
 }
-function sweep() {
+function abyssExpedition() {
   const depths = [
     { name: 'Shallows', size: 5, mines: 4 },
     { name: 'Blue Drop', size: 6, mines: 7 },

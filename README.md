@@ -3,16 +3,24 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-F7DF1E?logo=javascript&logoColor=000)
 ![Telegram](https://img.shields.io/badge/Telegram-Mini%20App-26A5E4?logo=telegram&logoColor=fff)
 
-A touch-first, sea-themed arcade built for Telegram. The public build remains an
-alpha; the active design lab is deliberately narrowing the slate to one social
-game and three testable prototypes. See [`DESIGN.md`](DESIGN.md) for the
-hypotheses, reversal conditions, and human evidence plan.
+A touch-first, sea-themed arcade built for Telegram. The current twelve-cabinet
+alpha preserves every original Telegram game and adds distinct upgraded or new
+loops alongside them. See [`DESIGN.md`](DESIGN.md) for the hypotheses, reversal
+conditions, and human evidence plan.
 
 | Game | Loop |
 | --- | --- |
 | 🦞 Claw Four | Consent-based best-of-three duel in a shared room |
+| 🐙 Kraken Sequence | Classic escalating Simon-style memory dive |
+| 💣 Abyss Sweep | Compact fair Minesweeper-style reef clear |
+| 🐚 Shell Shuffle | Timed matching with move and streak scoring |
+| ⚡ Reef Reflex | Five-round reaction test with false-start penalties |
 | 💣 Abyss Expedition | Solver-verified deduction boards with surface/descend commitment |
 | 🐙 Kraken Current | Fixed four-cue Normal/Reverse memory trials |
+| 👻 Echo Wake | Delayed spatial planning against your prior moves |
+| ⚪ Pearl Ricochet | Deterministic bank-shot challenge |
+| 🐚 Shell Shift | Whole-line board tactics with visible refills |
+| 🚨 Clawcade Panic | Six authored rapid-fire microgame emergencies |
 | 🪼 Tide Tell | Rule-switching tap/hold/wait reads with Calm/Deep pressure |
 
 The solo prototypes keep native personal-best metrics and an anonymous,

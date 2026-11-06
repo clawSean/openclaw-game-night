@@ -58,7 +58,7 @@ await send('Runtime.enable');
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
 
 // Kraken: complete Normal, Reverse, and one scored trial from observed cues.
-await navigate('kraken-sequence');
+await navigate('kraken-current');
 await click('#start');
 for (let trial = 0; trial < 3; trial += 1) {
   await evaluate(`window.__krakenCues=[];window.__krakenObserver=new MutationObserver(ms=>ms.forEach(m=>{if(m.target.classList.contains('lit'))window.__krakenCues.push(Number(m.target.dataset.pad))}));document.querySelectorAll('[data-pad]').forEach(p=>window.__krakenObserver.observe(p,{attributes:true,attributeFilter:['class']}))`);
@@ -75,7 +75,7 @@ for (let trial = 0; trial < 3; trial += 1) {
 assert.equal(await evaluate(`document.querySelector('#lives').textContent`), '3');
 
 // Abyss: deterministically clear two solver-verified depths, then surface.
-await navigate('abyss-sweep');
+await navigate('abyss-expedition');
 for (const [depth, size, mineCount, first] of [[0, 5, 4, 12], [1, 6, 7, 14]]) {
   const seed = `${new Date().toISOString().slice(0, 10)}:${room}:0:${depth}:${first}`;
   const { mines } = generateDeducibleBoard({ size, mineCount, first, seed });
@@ -93,6 +93,23 @@ assert.equal(await evaluate(`Boolean(document.querySelector('#surface'))`), true
 await click('#surface');
 assert.match(await evaluate(`document.querySelector('#result').textContent`), /Depth banked/);
 
+// Original Telegram cabinets remain separate and playable.
+await navigate('kraken-sequence');
+assert.equal(await evaluate(`Boolean(document.querySelector('#tempoMode'))`), true);
+await click('#start');
+assert.match(await evaluate(`document.querySelector('#level').textContent`), /1/);
+await navigate('abyss-sweep');
+assert.equal(await evaluate(`document.querySelectorAll('[data-tile]').length`), 25);
+await click('[data-tile="12"]');
+assert.notEqual(await evaluate(`document.querySelector('#safe').textContent`), '0 / 21');
+await navigate('shell-shuffle');
+assert.equal(await evaluate(`document.querySelectorAll('[data-card]').length`), 16);
+await click('[data-card="0"]');
+assert.equal(await evaluate(`document.querySelectorAll('.match-card.flipped').length`), 1);
+await navigate('reef-reflex');
+await click('#reaction');
+assert.match(await evaluate(`document.querySelector('#reactionText').textContent`), /Wait for it/);
+
 // Tide Tell: play one perfect calm wave from the visible rule, then prove a
 // wrong Deep Dive read ends the run with an attributable explanation.
 await navigate('tide-tell');
@@ -102,7 +119,7 @@ for (let cue = 0; cue < 6; cue += 1) {
   await sleep(120);
   const state = await evaluate(`(()=>{const name=document.querySelector('#tellName').textContent;const row=[...document.querySelectorAll('#ruleBoard>div')].find(item=>item.querySelector('span').textContent.includes(name));return{name,action:row.querySelector('strong').textContent}})()`);
   if (state.action === 'TAP') {
-    await evaluate(`const z=document.querySelector('#tellZone');z.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));z.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}))`);
+    await evaluate(`(()=>{const z=document.querySelector('#tellZone');z.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));z.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}))})()`);
     await sleep(450);
   } else if (state.action === 'HOLD') {
     await evaluate(`document.querySelector('#tellZone').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))`);
@@ -119,9 +136,9 @@ await click('#deep');
 await sleep(150);
 const deepAction = await evaluate(`(()=>{const name=document.querySelector('#tellName').textContent;const row=[...document.querySelectorAll('#ruleBoard>div')].find(item=>item.querySelector('span').textContent.includes(name));return row.querySelector('strong').textContent})()`);
 if (deepAction === 'DON’T TOUCH') {
-  await evaluate(`const z=document.querySelector('#tellZone');z.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));z.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}))`);
+  await evaluate(`(()=>{const z=document.querySelector('#tellZone');z.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));z.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}))})()`);
 } else if (deepAction === 'HOLD') {
-  await evaluate(`const z=document.querySelector('#tellZone');z.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));z.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}))`);
+  await evaluate(`(()=>{const z=document.querySelector('#tellZone');z.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));z.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}))})()`);
 } else {
   await sleep(1400);
 }
@@ -161,7 +178,7 @@ assert.equal(await evaluate(`document.querySelector('#panicScore').textContent`)
 
 for (const width of [360, 430]) {
   await send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: true });
-  for (const game of ['claw-four', 'abyss-sweep', 'kraken-sequence', 'tide-tell', 'echo-wake', 'pearl-ricochet', 'shell-shift', 'clawcade-panic']) {
+  for (const game of ['claw-four', 'kraken-sequence', 'abyss-sweep', 'shell-shuffle', 'reef-reflex', 'abyss-expedition', 'kraken-current', 'tide-tell', 'echo-wake', 'pearl-ricochet', 'shell-shift', 'clawcade-panic']) {
     await send('Page.navigate', { url: `${appOrigin}/?room=${room}&game=${game}` });
     await sleep(180);
     assert.equal(await evaluate('document.documentElement.scrollWidth'), width, `${game} overflows at ${width}px`);
@@ -170,5 +187,5 @@ for (const width of [360, 430]) {
 }
 
 assert.deepEqual(browserErrors, []);
-console.log('browser lab passed: 8 cabinets; legacy full flows; Echo delayed queue; Ricochet drag; Shell whole-line shift; Panic authored action; 360–430px no overflow/unnamed buttons/errors');
+console.log('browser lab passed: 12 cabinets; all five Telegram originals preserved; upgraded variants and Wave 1 exercised; 360–430px no overflow/unnamed buttons/errors');
 socket.close();
