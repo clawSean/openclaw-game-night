@@ -10,7 +10,8 @@ It is not a demo and the facilitator does not sell the games.
 - Record only anonymous session ID, device/browser class, viewport, reduced
   motion/screen reader state, and observations. Never record Telegram identity,
   names, or init data.
-- Pair two players for Claw Four. Solo cabinets can be tested individually.
+- Pair two players for Claw Four, Signal Storm, and Ghost Fleet. Solo cabinets
+  can be tested individually.
 - Rotate the solo-game order between players.
 
 ## Session
@@ -88,6 +89,36 @@ For every cabinet:
 - Did the rule change produce adaptation rather than confusion?
 - Did Calm/Deep reflect confidence, or did one option feel obviously correct?
 - Did a Deep miss feel like a fair read error?
+
+### Signal Storm
+
+- Could both players explain who reads information and who acts on it after the
+  untimed crisis, without facilitator coaching?
+- Did the role-specific panel make the Navigator and Engineer feel different?
+- Did either player solve a randomized instrument clue instead of merely
+  repeating the capitalized answer?
+- Did the shared cause replay make a failed crisis attributable?
+- Did both players voluntarily acknowledge the replay and continue?
+
+### Ghost Fleet
+
+- Could both players plan three orders without seeing the rival queue?
+- Did the three board beats make turns, movement, collisions, sonar locks, and
+  broadsides causally legible?
+- Did either captain change a later program based on a prediction about the
+  rival rather than choosing commands randomly?
+- Did SONAR create a useful later broadside plan?
+- Did either player request a rematch after a loss?
+
+### Panic: Director's Cut
+
+- Did the tutorial make tap, hold, wait, target, and drag legible before the
+  timed reel began?
+- Did failure copy preserve the exact missed action?
+- Could the player read the leviathan's three distinct telegraphs and describe
+  its progression?
+- Did backgrounding Telegram pause fairly without awarding or removing a life?
+- Did reduced motion preserve the same decision information?
 
 ## Decision after each test wave
 

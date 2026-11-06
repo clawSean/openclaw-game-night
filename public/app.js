@@ -9,6 +9,9 @@ import {
   shiftReef,
   tideActionMatches,
 } from './game-core.js';
+import { mountSignalStorm } from './games/signal-storm.js';
+import { mountPanic } from './games/panic-directors-cut.js';
+import { mountGhostFleet } from './games/ghost-fleet.js';
 
 const tg = window.Telegram?.WebApp;
 tg?.ready?.();
@@ -47,8 +50,11 @@ const games = [
   { id: 'pearl-ricochet', icon: '⚪', name: 'Pearl Ricochet', tag: 'TRICK SHOTS', desc: 'Bank one pearl through a living coral course.', color: 'gold' },
   { id: 'shell-shift', icon: '🐚', name: 'Shell Shift', tag: 'BOARD TACTICS', desc: 'Move whole reef lines and engineer chain reactions.', color: 'coral' },
   { id: 'clawcade-panic', icon: '🚨', name: 'Clawcade Panic', tag: 'MICROGAME GAUNTLET', desc: 'Six ridiculous emergencies. Read fast. Act faster.', color: 'violet' },
+  { id: 'signal-storm', icon: '⚓', name: 'Signal Storm', tag: '2-PLAYER CO-OP', desc: 'Different screens. Shared submarine. Talk or implode.', color: 'sea' },
+  { id: 'panic-directors-cut', icon: '🎭', name: 'Panic: Director’s Cut', tag: 'AUTHORED MICROGAME SHOW', desc: 'Twenty scenes, four lives, three acts, one furious leviathan.', color: 'coral' },
+  { id: 'ghost-fleet', icon: '☠️', name: 'Ghost Fleet', tag: 'SECRET PROGRAM DUEL', desc: 'Write three moments. Reveal together. Sink your rival in the fog.', color: 'blue' },
 ];
-const metricVersion = { 'abyss-sweep': 2, 'shell-shuffle': 2, 'abyss-expedition': 1, 'kraken-current': 1, 'tide-tell': 1, 'echo-wake': 1, 'pearl-ricochet': 1, 'shell-shift': 1, 'clawcade-panic': 1 };
+const metricVersion = { 'abyss-sweep': 2, 'shell-shuffle': 2, 'abyss-expedition': 1, 'kraken-current': 1, 'tide-tell': 1, 'echo-wake': 1, 'pearl-ricochet': 1, 'shell-shift': 1, 'clawcade-panic': 1, 'panic-directors-cut': 1 };
 const key = (id) => `clawcade:best:${id}${metricVersion[id] ? `:v${metricVersion[id]}` : ''}`;
 const best = (id) => Number(localStorage.getItem(key(id)) || 0);
 function formatScore(id, value) {
@@ -63,6 +69,7 @@ function formatScore(id, value) {
   if (id === 'pearl-ricochet') return `${value} gates`;
   if (id === 'shell-shift') return `${value} shells`;
   if (id === 'clawcade-panic') return `${value} saves`;
+  if (id === 'panic-directors-cut') return `${value} points`;
   return String(value);
 }
 function formatBest(id, value = best(id)) { return value ? formatScore(id, value) : '' ; }
@@ -122,6 +129,9 @@ function open(id, { write = 'replace' } = {}) {
   if (id === 'pearl-ricochet') cleanup = pearlRicochet();
   if (id === 'shell-shift') cleanup = shellShift();
   if (id === 'clawcade-panic') cleanup = clawcadePanic();
+  if (id === 'signal-storm') cleanup = mountSignalStorm({ mount, shell, roomId, note, track, vibrate, beep, goMenu });
+  if (id === 'panic-directors-cut') cleanup = mountPanic({ mount, record, track, note, vibrate, beep, menu: goMenu });
+  if (id === 'ghost-fleet') cleanup = mountGhostFleet({ mount, shell, roomId, note, track, vibrate, beep });
   if (id === 'claw-four') cleanup = clawFour();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }

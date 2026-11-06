@@ -1,6 +1,6 @@
 # Clawcade cabinet portfolio
 
-Updated: 2026-11-05
+Updated: 2026-11-06
 
 ## Product direction
 
@@ -9,8 +9,10 @@ valuable when it covers different player fantasies, primary verbs, skill types,
 and social textures. A cabinet does not earn its slot merely by working or by
 wearing a different sea-creature skin.
 
-The target portfolio is 12–14 strong cabinets. Staging may hold unfinished lab
-versions, but production promotion remains cabinet-by-cabinet.
+The portfolio grows when a new cabinet adds a genuinely different fantasy,
+verb, skill, or social relationship. There is no artificial upper cap and no
+slot-filling quota. Beta may hold unfinished lab versions, but production
+promotion remains cabinet-by-cabinet.
 
 ## Evidence that changes the design
 
@@ -79,9 +81,11 @@ promotion. Presentation is allowed to amplify fun, but not impersonate it.
 | Echo Wake | Move | Outsmart your past self | Delayed spatial planning | Wave 1 |
 | Pearl Ricochet | Flick | Make an impossible trick shot | Aim + rebound planning | Wave 1 |
 | Shell Shift | Slide | Repair a living reef | Discrete board optimization | Wave 1 |
-| Clawcade Panic | Act | Survive ridiculous emergencies | Authored gesture comedy | Wave 1 |
+| Clawcade Panic | Act | Survive ridiculous emergencies | Authored gesture comedy | Original preserved |
+| Panic: Director's Cut | Perform | Survive a directed undersea disaster reel | Gesture comedy + boss sequence | Flagship beta |
+| Signal Storm | Communicate | Save a failing submarine | Asymmetric live co-op | Flagship beta |
+| Ghost Fleet | Program | Outsmart a rival ghost captain | Simultaneous hidden-order duel | Flagship beta |
 | Salvage Auction | Bid | Read rival captains | Scarcity + bluff | Wave 2 |
-| Signal Storm | Relay | Save a failing submarine | Voice-free co-op | Wave 2 |
 | Wordwreck | Trace | Recover a sunken logbook | Words + spatial planning | Wave 2 |
 | Drumline Depths | Pulse | Answer a whale orchestra | Rhythm + pattern | Wave 2 |
 | Squid Sketch | Sketch | Communicate with one ink stroke | Creative group play | Wave 3 |
@@ -91,6 +95,9 @@ The coverage rule prevents disguised duplicates. Kraken owns memory, Tide owns
 rule inhibition, and Panic owns rapid gesture switching and comedy. Abyss owns
 solo information risk; Auction owns opponent-driven scarcity. Pearl is
 continuous aim; Shell Shift is discrete planning; Beam Keeper is routing.
+Signal Storm owns asymmetric spoken coordination; Ghost Fleet owns simultaneous
+programming and prediction. Director's Cut owns authored spectacle and a
+multi-phase boss, while the original Panic cabinet remains intact.
 
 ## Wave 1 experiments
 

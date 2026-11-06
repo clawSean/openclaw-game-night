@@ -1,0 +1,269 @@
+.signal-stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 2px solid #2ee6c866;
+  border-radius: 26px;
+  background: radial-gradient(
+    circle at 50% 10%,
+    #16556c 0,
+    #082d42 38%,
+    #03141f 100%
+  );
+  box-shadow:
+    inset 0 0 50px #00131dcc,
+    0 18px 38px #0008;
+  transition:
+    border-color 0.25s,
+    filter 0.25s,
+    transform 0.25s;
+}
+.signal-stage[data-phase="active"] {
+  border-color: #ffc94dcc;
+}
+.signal-stage[data-phase="resolved"] {
+  border-color: #ff8270;
+}
+.signal-stage[data-phase="won"] {
+  background: linear-gradient(#e6a85f, #277e9d 42%, #082d42);
+}
+.signal-stage[data-phase="lost"] {
+  filter: saturate(0.35) brightness(0.72);
+}
+.signal-stage[data-hull="1"] {
+  box-shadow:
+    inset 0 0 80px #9b1f25aa,
+    0 18px 38px #0008;
+}
+.signal-water {
+  position: absolute;
+  inset: auto -10% -15% -10%;
+  height: 46%;
+  z-index: -1;
+  background: repeating-radial-gradient(
+    ellipse at 50% 0,
+    #2a91a8 0 8px,
+    #0e5068 9px 20px
+  );
+  opacity: 0.32;
+  animation: signal-water 4s ease-in-out infinite;
+}
+.signal-cracks {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    linear-gradient(68deg, transparent 48%, #b9efff99 49% 50%, transparent 51%)
+      75% 7%/32% 48% no-repeat,
+    linear-gradient(112deg, transparent 48%, #b9efff66 49% 50%, transparent 51%)
+      83% 17%/25% 42% no-repeat;
+}
+.signal-stage[data-hull="1"] .signal-cracks {
+  opacity: 1;
+}
+.signal-cast {
+  width: 7.5rem;
+  margin: -0.25rem auto -0.6rem;
+}
+.signal-cast svg {
+  max-height: 7rem;
+}
+.signal-role {
+  display: table;
+  position: relative;
+  margin: 0.2rem auto 0.75rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid #b7f4ff66;
+  border-radius: 999px;
+  background: #041924dd;
+  color: #b7f4ff;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.signal-porthole {
+  position: relative;
+  overflow: hidden;
+  min-height: 10.8rem;
+  display: grid;
+  place-content: center;
+  padding: 1rem;
+  border: 10px solid #986b35;
+  border-radius: 50% / 42%;
+  background: radial-gradient(circle, #14566f 0, #082a3d 58%, #03141f 100%);
+  text-align: center;
+  box-shadow:
+    inset 0 0 0 4px #e2b35c,
+    inset 0 0 40px #0015;
+}
+.signal-porthole strong {
+  position: relative;
+  z-index: 2;
+  color: #fff1b7;
+  font-size: 1.08rem;
+  letter-spacing: 0.08em;
+}
+.signal-porthole p {
+  position: relative;
+  z-index: 2;
+  margin: 0.55rem auto 0;
+  max-width: 20rem;
+  color: #d7eef0;
+  line-height: 1.35;
+}
+.signal-sweep {
+  position: absolute;
+  inset: -45%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 78%,
+    #2ee6c822 90%,
+    transparent 100%
+  );
+  animation: signal-sweep 3.2s linear infinite;
+}
+.signal-clue {
+  margin: 0.85rem 0;
+  padding: 0.9rem;
+  border: 2px solid #ffc94d;
+  border-radius: 16px;
+  background: #372d13dd;
+  color: #fff4c6;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 0 20px #ffc94d22;
+}
+.signal-controls > p {
+  margin: 0.4rem 0;
+  color: #9fc1c7;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+.signal-controls > div {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+}
+.signal-controls button {
+  min-width: 0;
+  padding: 0.7rem 0.25rem;
+  background: linear-gradient(#215c70, #103848);
+  border-color: #8bd7df;
+  color: #ecffff;
+  font-size: 0.72rem;
+  box-shadow: inset 0 1px #ffffff24;
+}
+.signal-controls button:active {
+  background: #ffc94d;
+  color: #241706;
+}
+.signal-ending.surfaced {
+  border-color: #ffe17f;
+  background: linear-gradient(#58441c, #183d44);
+}
+.signal-ending.imploded {
+  border-color: #ff8270;
+  background: linear-gradient(#4c2228, #1e1d27);
+}
+.signal-brief {
+  border-color: #2ee6c8;
+}
+.storm-score strong {
+  letter-spacing: 0.08em;
+}
+@keyframes signal-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes signal-water {
+  50% {
+    transform: translateY(-8px) scaleX(1.03);
+  }
+}
+@media (max-width: 380px) {
+  .signal-stage {
+    padding: 0.75rem;
+  }
+  .signal-porthole {
+    min-height: 9rem;
+    border-width: 8px;
+  }
+  .signal-cast {
+    width: 6rem;
+  }
+  .signal-controls button {
+    font-size: 0.66rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .signal-water,
+  .signal-sweep {
+    animation: none;
+  }
+  .signal-stage {
+    transition: none;
+  }
+}
+
+.signal-controls {
+  position: relative;
+  margin-top: 0.9rem;
+  padding: 0.8rem;
+  border: 2px solid #6fb8c7;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #163c4a, #081d27);
+  box-shadow: inset 0 1px #fff2, inset 0 -10px 25px #0019;
+}
+.signal-controls > p { margin: 0.4rem 0 0.7rem; color: #b8edf4; }
+.signal-controls > div:last-child { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem; }
+.signal-controls button { display: grid; place-items: center; min-width: 0; min-height: 5rem; padding: 0.45rem 0.2rem; }
+.signal-controls button span { font-size: 1.35rem; line-height: 1; }
+.signal-controls button strong { font-size: 0.7rem; letter-spacing: 0.04em; }
+.signal-controls button small { color: #b8d8dd; font-size: 0.56rem; line-height: 1.1; }
+.signal-controls button.selected,
+.signal-controls button[aria-pressed="true"] { border-color: #fff2a4; background: #ffc94d; color: #241706; box-shadow: 0 0 0 3px #ffc94d55, 0 0 24px #ffc94d66; }
+.signal-controls .signal-confirm { width: 100%; min-height: 3.25rem; margin-top: 0.65rem; background: #ffc94d; color: #241706; }
+.engine-console { border-color: #f2a948; background: linear-gradient(145deg, #4c3218, #1e1a18); }
+.engine-console button { background: linear-gradient(#6d4720, #352413); border-color: #ffca67; }
+.signal-radar { position: relative; width: 3.5rem; height: 3.5rem; margin: -0.25rem auto 0; border: 2px solid #4be4ce; border-radius: 50%; background: repeating-radial-gradient(circle, #0b2f39 0 8px, #3fd7c722 9px 10px); }
+.signal-radar i { position: absolute; inset: 50% 50% 0; border-left: 2px solid #9effda; transform-origin: top; animation: signal-sweep 2s linear infinite; }
+.signal-radar b { position: absolute; inset: 0; display: grid; place-items: center; color: #b8fff1; font-size: 0.55rem; }
+.signal-gauges { display: flex !important; justify-content: center; gap: 0.5rem; }
+.signal-gauges i { width: 2.4rem; height: 1.35rem; overflow: hidden; border: 2px solid #ffbf56; border-radius: 2rem 2rem 0.3rem 0.3rem; background: conic-gradient(from 270deg, #52e0b5 0 var(--g), #442b1d var(--g) 100%); }
+.signal-tutorial { margin: 0.8rem 0; padding: 0.8rem; border: 2px dashed #80ead8; border-radius: 16px; background: #092c34; color: #dffff9; }
+.signal-tutorial > strong { display: block; color: #ffe17f; font-size: 0.72rem; letter-spacing: 0.1em; text-align: center; }
+.signal-tutorial ol { margin: 0.6rem 0 0; padding-left: 1.3rem; }
+.signal-tutorial li { margin: 0.32rem 0; line-height: 1.25; }
+.signal-replay { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.45rem; margin-top: 0.6rem; }
+.signal-replay span { display: grid; gap: 0.2rem; padding: 0.5rem; border-radius: 10px; background: #041c25; text-align: center; }
+.signal-replay b { color: #fff; font-size: 0.82rem; }
+.signal-replay em { color: #ffb1a5; font-size: 0.6rem; font-style: normal; }
+.signal-replay em.good { color: #72efc7; }
+.signal-mildred { position: relative; z-index: 2; width: 10rem; margin: -0.6rem auto 0.2rem; filter: drop-shadow(0 8px 8px #0018); }
+.signal-mildred svg { display: block; overflow: visible; }
+.mildred-hull { fill: #d9a33f; stroke: #1c2831; stroke-width: 6; }
+.mildred-fin { fill: #9b6d2e; stroke: #1c2831; stroke-width: 5; }
+.mildred-prop { fill: none; stroke: #d8eef1; stroke-width: 7; stroke-linecap: round; }
+.signal-mildred circle { fill: #7be6e3; stroke: #1c2831; stroke-width: 5; }
+.mildred-smile { fill: none; stroke: #1c2831; stroke-width: 4; stroke-linecap: round; }
+.mildred-leak { fill: none; stroke: #7be6e3; stroke-width: 5; stroke-linecap: round; animation: mildred-leak 0.8s ease-in-out infinite alternate; }
+.mildred-bubble { fill: #b7ffff !important; stroke-width: 2 !important; }
+.mildred-crack { fill: none; stroke: #ff6c70; stroke-width: 5; }
+.signal-stage[data-phase="lost"] .signal-porthole,
+.signal-stage[data-phase="lost"] .signal-clue,
+.signal-stage[data-phase="lost"] .signal-controls,
+.signal-stage[data-phase="won"] .signal-porthole,
+.signal-stage[data-phase="won"] .signal-clue,
+.signal-stage[data-phase="won"] .signal-controls { display: none; }
+@keyframes mildred-leak { to { transform: translate(3px, 3px); opacity: 0.45; } }
+@media (max-width: 380px) { .signal-controls button small { display: none; } }
+@media (prefers-reduced-motion: reduce) { .signal-radar i, .mildred-leak { animation: none; } }

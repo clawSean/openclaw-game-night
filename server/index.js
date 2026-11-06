@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { winningCells } from "../public/game-core.js";
+import { handleSignalStorm } from "./games/signal-storm.js";
+import { handleGhostFleet } from "./games/ghost-fleet.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const rootDir = join(__dirname, "..");
@@ -224,6 +226,24 @@ createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
     const parts = url.pathname.split("/").filter(Boolean);
+    if (parts[0] === "api" && parts[1] === "games" && parts[2] === "signal-storm" && parts[3] === "rooms") {
+      return await handleSignalStorm({
+        req,
+        roomId: parts[4],
+        action: parts[5] || "state",
+        readJson,
+        json: (status, body) => json(res, status, body),
+      });
+    }
+    if (parts[0] === "api" && parts[1] === "games" && parts[2] === "ghost-fleet" && parts[3] === "rooms") {
+      return await handleGhostFleet({
+        req,
+        roomId: parts[4],
+        action: parts[5] || "state",
+        readJson,
+        json: (status, body) => json(res, status, body),
+      });
+    }
     if (parts[0] === "api") return await handleApi(req, res, parts);
     return await serveStatic(req, res, url.pathname);
   } catch (error) {

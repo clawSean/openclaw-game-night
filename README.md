@@ -3,7 +3,7 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-F7DF1E?logo=javascript&logoColor=000)
 ![Telegram](https://img.shields.io/badge/Telegram-Mini%20App-26A5E4?logo=telegram&logoColor=fff)
 
-A touch-first, sea-themed arcade built for Telegram. The current twelve-cabinet
+A touch-first, sea-themed arcade built for Telegram. The current fifteen-cabinet
 alpha preserves every original Telegram game and adds distinct upgraded or new
 loops alongside them. See [`DESIGN.md`](DESIGN.md) for the hypotheses, reversal
 conditions, and human evidence plan.
@@ -22,6 +22,9 @@ conditions, and human evidence plan.
 | 🐚 Shell Shift | Whole-line board tactics with visible refills |
 | 🚨 Clawcade Panic | Six authored rapid-fire microgame emergencies |
 | 🪼 Tide Tell | Rule-switching tap/hold/wait reads with Calm/Deep pressure |
+| ⚓ Signal Storm | Asymmetric two-player submarine crisis communication |
+| ☠ Ghost Fleet | Secret three-order simultaneous naval tactics |
+| 🎬 Panic: Director's Cut | Authored gesture comedy with a three-phase leviathan finale |
 
 The solo prototypes keep native personal-best metrics and an anonymous,
 session-scoped playtest trace in browser storage. The trace excludes Telegram
@@ -37,11 +40,12 @@ npm start
 npm run check
 ```
 
-The optional real-browser lab script expects a local CDP-enabled browser at
+The optional real-browser labs expect a local CDP-enabled browser at
 `127.0.0.1:9223` and the app at `127.0.0.1:8788`:
 
 ```sh
 npm run test:browser
+npm run test:flagship
 ```
 
 Open `http://127.0.0.1:8787/?room=my-room`. Add `&game=claw-four` (or any game ID) for a direct game link. Set `PORT` to override `8787`.
@@ -53,7 +57,7 @@ Use a normal URL button pointing to your BotFather Mini App direct link (`https:
 ## Architecture
 
 - `public/`: accessible single-page arcade, CSS, and vanilla JavaScript games.
-- `server/index.js`: static serving and the Claw Four room API.
+- `server/index.js`: static serving plus Claw Four, Signal Storm, and Ghost Fleet room APIs.
 - No Telegram token or API credentials are needed in this app.
 
 Room state is not durable yet, so avoid promising uninterrupted multiplayer games across service restarts. The solo games are entirely client-side.

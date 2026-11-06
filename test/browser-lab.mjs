@@ -4,9 +4,8 @@ import { generateDeducibleBoard } from '../public/game-core.js';
 const cdpOrigin = process.env.CDP_ORIGIN || 'http://127.0.0.1:9223';
 const appOrigin = process.env.APP_ORIGIN || 'http://127.0.0.1:8788';
 const room = 'design-lab';
-const pages = await (await fetch(`${cdpOrigin}/json/list`)).json();
-const page = pages.find((candidate) => candidate.type === 'page' && (candidate.url.includes('8788') || candidate.url.includes('games.jpop.cloud')));
-assert.ok(page, 'open Clawcade in a CDP-enabled browser first');
+const page = await (await fetch(`${cdpOrigin}/json/new?${encodeURIComponent(`${appOrigin}/?room=${room}`)}`, { method: 'PUT' })).json();
+assert.ok(page?.webSocketDebuggerUrl, 'create a fresh Clawcade CDP page');
 
 const socket = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((resolve) => { socket.onopen = resolve; });
@@ -188,9 +187,27 @@ await click('[data-win="tap"]');
 await sleep(650);
 assert.equal(await evaluate(`document.querySelector('#panicScore').textContent`), '1');
 
+// Director's Cut: a full authored-show shell with four lives, randomized scenes,
+// original host art, and a boss-capable three-act run renders without coaching.
+await navigate('panic-directors-cut');
+await click('#pdc-start');
+await sleep(1200);
+assert.match(await evaluate(`document.querySelector('#pdc-lives').textContent`), /●●●●/);
+assert.equal(await evaluate(`Boolean(document.querySelector('#pdc-captain svg[role="img"]'))`), true);
+assert.equal(await evaluate(`document.querySelector('#pdc-command').textContent.length > 0`), true);
+
+// Multiplayer flagships render their distinct join surfaces before a second
+// browser arrives. Full two-browser contracts live in flagship-browser-lab.mjs.
+await navigate('signal-storm');
+assert.equal(await evaluate(`Boolean(document.querySelector('#stormJoinButton'))`), true);
+assert.equal(await evaluate(`Boolean(document.querySelector('#signalCast svg[role="img"]'))`), true);
+await navigate('ghost-fleet');
+assert.equal(await evaluate(`Boolean(document.querySelector('#ghostJoinButton'))`), true);
+assert.equal(await evaluate(`document.querySelectorAll('#ghostCards [data-command]').length`), 6);
+
 for (const width of [360, 430]) {
   await send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: true });
-  for (const game of ['claw-four', 'kraken-sequence', 'abyss-sweep', 'shell-shuffle', 'reef-reflex', 'abyss-expedition', 'kraken-current', 'tide-tell', 'echo-wake', 'pearl-ricochet', 'shell-shift', 'clawcade-panic']) {
+  for (const game of ['claw-four', 'kraken-sequence', 'abyss-sweep', 'shell-shuffle', 'reef-reflex', 'abyss-expedition', 'kraken-current', 'tide-tell', 'echo-wake', 'pearl-ricochet', 'shell-shift', 'clawcade-panic', 'signal-storm', 'panic-directors-cut', 'ghost-fleet']) {
     await send('Page.navigate', { url: `${appOrigin}/?room=${room}&game=${game}` });
     await sleep(180);
     assert.equal(await evaluate('document.documentElement.scrollWidth'), width, `${game} overflows at ${width}px`);
@@ -199,5 +216,5 @@ for (const width of [360, 430]) {
 }
 
 assert.deepEqual(browserErrors, []);
-console.log('browser lab passed: 12 cabinets; all five Telegram originals preserved; upgraded variants and Wave 1 exercised; 360–430px no overflow/unnamed buttons/errors');
+console.log('browser lab passed: 15 cabinets; all five Telegram originals preserved; flagship wave rendered; 360–430px no overflow/unnamed buttons/errors');
 socket.close();

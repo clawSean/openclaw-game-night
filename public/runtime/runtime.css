@@ -1,0 +1,149 @@
+.claw-character {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  color: var(--text, #eef8f4);
+  filter: drop-shadow(0 0.65rem 0.65rem rgb(0 0 0 / 28%));
+}
+
+.claw-character__shadow {
+  fill: rgb(0 0 0 / 24%);
+}
+
+.claw-character--idle .claw-character__body {
+  animation: claw-character-breathe 2.4s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+.claw-character--panic .claw-character__body,
+.claw-character--panic .claw-character__specter {
+  animation: claw-character-panic 420ms ease-in-out infinite;
+  transform-origin: center;
+}
+
+.claw-character--victory .claw-character__body,
+.claw-character--victory .claw-character__specter {
+  animation: claw-character-victory 700ms cubic-bezier(.2,.9,.28,1.2) both;
+  transform-origin: center bottom;
+}
+
+.claw-character__specter {
+  animation: claw-character-float 2.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.claw-fx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+.claw-particle {
+  --fx-x: 50vw;
+  --fx-y: 50vh;
+  --fx-dx: 0px;
+  --fx-dy: -80px;
+  --fx-size: 10px;
+  --fx-color: #2ee6c8;
+  --fx-duration: 850ms;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--fx-size);
+  height: var(--fx-size);
+  border-radius: 50%;
+  background: var(--fx-color);
+  box-shadow: 0 0 0.55rem color-mix(in srgb, var(--fx-color) 60%, transparent);
+  opacity: 0;
+  transform: translate(var(--fx-x), var(--fx-y));
+  animation: claw-particle-burst var(--fx-duration) ease-out forwards;
+}
+
+.claw-particle--bubble {
+  border: 2px solid var(--fx-color, #b7f4ff);
+  background: transparent;
+  box-shadow: inset 0.1rem 0.1rem 0.2rem rgb(255 255 255 / 45%);
+}
+
+.claw-particle--spark {
+  border-radius: 2px;
+  transform: translate(var(--fx-x), var(--fx-y)) rotate(45deg);
+}
+
+.claw-particle--debris {
+  border-radius: 35% 65% 55% 45%;
+}
+
+.claw-impact--light { animation: claw-impact-light 180ms ease-out; }
+.claw-impact--medium { animation: claw-impact-medium 260ms ease-out; }
+.claw-impact--heavy,
+.claw-impact--error { animation: claw-impact-heavy 360ms ease-out; }
+.claw-impact--success { animation: claw-impact-success 420ms ease-out; }
+.claw-impact--static { outline: 3px solid var(--sea, #2ee6c8); outline-offset: -3px; }
+
+@keyframes claw-character-breathe {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-2px) scaleY(1.012); }
+}
+
+@keyframes claw-character-float {
+  0%, 100% { transform: translateY(0); opacity: .92; }
+  50% { transform: translateY(-6px); opacity: 1; }
+}
+
+@keyframes claw-character-panic {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  35% { transform: translateX(-3px) rotate(-1deg); }
+  70% { transform: translateX(3px) rotate(1deg); }
+}
+
+@keyframes claw-character-victory {
+  0% { transform: translateY(9px) scale(.94); }
+  60% { transform: translateY(-7px) scale(1.04); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes claw-particle-burst {
+  0% { opacity: 0; transform: translate(var(--fx-x), var(--fx-y)) scale(.45); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(var(--fx-x) + var(--fx-dx)), calc(var(--fx-y) + var(--fx-dy))) scale(1.08) rotate(160deg); }
+}
+
+@keyframes claw-impact-light {
+  50% { transform: scale(.993); filter: brightness(1.08); }
+}
+
+@keyframes claw-impact-medium {
+  30% { transform: translateX(-3px); }
+  65% { transform: translateX(3px); filter: brightness(1.1); }
+}
+
+@keyframes claw-impact-heavy {
+  20% { transform: translate(-6px, 1px) rotate(-.35deg); }
+  45% { transform: translate(5px, -1px) rotate(.35deg); filter: brightness(1.14); }
+  70% { transform: translate(-2px, 0); }
+}
+
+@keyframes claw-impact-success {
+  45% { transform: scale(1.012); filter: brightness(1.16) saturate(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .claw-character__body,
+  .claw-character__specter,
+  .claw-particle,
+  [class*="claw-impact--"] {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .claw-character { filter: none; }
+  .claw-particle { border: 2px solid CanvasText; background: Canvas; box-shadow: none; }
+  .claw-impact--static { outline-color: Highlight; }
+}
